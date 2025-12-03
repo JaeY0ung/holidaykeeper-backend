@@ -48,14 +48,15 @@ public class CountryServiceImpl implements CountryService {
      * 싱크 맞추기 (기존 db에 저장되어 있는 국가 정보 제거하고 api로 다시 호출하여 저장)
      */
     private void syncCountries() {
-        // 가존에 저장되어 있던 국가 정보 모두 삭제
-        countryRepository.deleteAll();
         // api로 국가 정보 가져오기
         List<CountryResponse> responses = nagerApiClient.fetchAvailableCountries();
         // 변환
         List<Country> countries = responses.stream()
             .map(countryConverter::toEntity)
             .toList();
+
+        // 가존에 저장되어 있던 국가 정보 모두 삭제
+        countryRepository.deleteAll();
         // 저장
         countryRepository.saveAll(countries);
     }
