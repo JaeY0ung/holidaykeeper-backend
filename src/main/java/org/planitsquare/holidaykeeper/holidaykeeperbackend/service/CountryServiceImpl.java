@@ -33,14 +33,14 @@ public class CountryServiceImpl implements CountryService {
             return countryList;
         }
         log.info("국가 데이터가 없습니다. 외부 API에서 데이터를 가져옵니다.");
-        fetchAndSaveCountries();
+        syncCountries();
         return countryRepository.findAll();
     }
 
     /**
      * 싱크 맞추기 (기존 db에 저장되어 있는 국가 정보 제거하고 api로 다시 호출하여 저장)
      */
-    private void fetchAndSaveCountries() {
+    private void syncCountries() {
         // 가존에 저장되어 있던 국가 정보 모두 삭제
         countryRepository.deleteAll();
         // api로 국가 정보 가져오기
