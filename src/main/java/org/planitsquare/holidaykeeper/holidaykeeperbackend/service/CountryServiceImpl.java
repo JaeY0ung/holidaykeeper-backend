@@ -24,6 +24,13 @@ public class CountryServiceImpl implements CountryService {
     private final CountryConverter countryConverter;
 
     @Override
+    public Country getCountryByCode(String countryCode) {
+
+        return countryRepository.findByCode(countryCode)
+            .orElseThrow(() -> new IllegalArgumentException("잘못된 국가 코드입니다."));
+    }
+
+    @Override
     public List<Country> getCountryList() {
 
         List<Country> countryList = countryRepository.findAll();
