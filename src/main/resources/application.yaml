@@ -17,14 +17,10 @@ spring:
     show-sql: false # SQL log print mode
     properties:
       hibernate:
-        hibernate.jdbc.batch_size: 30
-        javax.persistence.lock.timeout: 10000   # 10 seconds
-        javax.persistence.query.timeout: 10000  # 10 seconds
-        dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true # formatting sql
         jdbc:
-          lob:
-            non_contextual_creation: true
+          batch_size: 30
+
 
   h2:
     console:
@@ -36,3 +32,9 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: alpha
     tags-sorter: alpha
+
+nager:
+  api:
+    base-url: https://date.nager.at/api/v3
+    connect-timeout: 5000
+    read-timeout: 10000
