@@ -7,69 +7,84 @@
 # 상세 기능 명세
 
 1. 데이터 적재
+
 - [ ]  최근 5년 (2020 ~ 2025)의 공휴일을 외부 API에서 수집하여 저장
 - [ ]  최초 실행시 시 5년 × N 개 국가를 일괄 적재하는 기능 포함
+
 2. 검색
+
 - [ ]  연도별, 국가별 필터 기반 공휴일 조회
 - [ ]  from ~ to 기간, 공휴일 타입 등 추가 필터 자유 확장
 - [ ]  결과는 페이징 형태로 응답
+
 3. 재동기화(Refresh)
+
 - [ ]  특정 연도, 국가 데이터를 재호출하여 Upsert(덮어쓰기) 가능
+
 4. 삭제
+
 - [ ]  특정 연도, 국가의 공휴일 레코드 전체 삭제
+
 5. (선택) 배치 자동화
+
 - [ ]  매년 1월 2일 01:00 KST 에 전년도·금년도 데이터를 자동 동기화
+
 6. 테스트
+
 - [ ]  JUnit 5 활용하여, 일정한 주기로 서비스 메서드 단위, 컨트롤러 메소드로 테스트 코드 작성 및 테스트 진행
+
 7. 기타사항
+
 - [ ]  엔드포인트 경로
 - [ ]  HTTP 메서드
 - [ ]  파라미터, 응답 스키마 등 REST API 설계
 
 # 기술 스택
 
-| 필수 스택 | Java 21 · Spring Boot 3.4 · JPA(Hibernate) | 비고 |
-| --- | --- |-----------------|
-| DB | 인메모리 H2 |                 |
-| 테스트 | JUnit 5 | 선택이지만 권장        |
-| 문서화 | OpenAPI 3(Swagger UI)로 직접 설계한 API 자동 노출 |                 |
-| 기타 스택 | Querydsl 5, Dockerfile, GitHub Actions CI 등 자유 | 자유              |
-| UI / UX | 필수 아님, 기술 스택 제한 없음 | 선택, 기술 스택 제한 없음 |
-
+| 필수 스택   | Java 21 · Spring Boot 3.4 · JPA(Hibernate)     | 비고              |
+|---------|------------------------------------------------|-----------------|
+| DB      | 인메모리 H2                                        |                 |
+| 테스트     | JUnit 5                                        | 선택이지만 권장        |
+| 문서화     | OpenAPI 3(Swagger UI)로 직접 설계한 API 자동 노출        |                 |
+| 기타 스택   | Querydsl 5, Dockerfile, GitHub Actions CI 등 자유 | 자유              |
+| UI / UX | 필수 아님, 기술 스택 제한 없음                             | 선택, 기술 스택 제한 없음 |
 
 # 사용할 API
 
 ## 1. 국가 목록 조회
--  엔드 포인트: https://date.nager.at/api/v3/AvailableCountries
--  응답: 국가 정보 배열
--  응답 형식
+
+- 엔드 포인트: https://date.nager.at/api/v3/AvailableCountries
+- 응답: 국가 정보 배열
+- 응답 형식
+
 ```
 [
     {
         "countryCode": "AD", // 국가 코드 (ISO 3166-1 alpha-2, 알파벳 대문자 2자) - 변동 가능 (ex. 동독이 독일에 통합되면서 DD에서 DE로 변경)
-        "name": "Andorra" // 영문 국가명 (영문, 특수문자 포함 가능 예: ü)
+        "name": "Andorra"    // 영문 국가명 (영문, 특수문자 포함 가능 예: ü)
     },
     // ... 추가 국가들
 ]
 ```
 
-
 ## 2. 특정 연도 공휴일 조회
+
 - 엔드 포인트: https://date.nager.at/api/v3/PublicHolidays/{year}/{countryCode}
 - 응답: 공휴일 정보 배열
 - 응답 형식
+
 ```
 [
     {
-        "date": "2025-01-01",         // 공휴일 날짜 (YYYY-MM-DD 형식)
-        "localName": "Any nou",     // 현지 언어로 된 공휴일 명칭
+        "date": "2025-01-01",     // 공휴일 날짜 (YYYY-MM-DD 형식)
+        "localName": "Any nou",   // 현지 언어로 된 공휴일 명칭
         "name": "New Year's Day", // 영문 공휴일 명칭
-        "countryCode": "AD",          // 국가 코드 (ISO 3166-1 alpha-2)
-        "fixed": false,                       // 고정 공휴일 여부 (true: 매년 같은 날짜, false: 변동 가능)
-        "global": true,                      // 전국 단위 공휴일 여부 (true: 전국, false: 지역 한정)
-        "counties": null,                   // 적용 지역 목록 (global이 false일 경우 배열, 전국일 경우 null)
-        "launchYear": null,               // 공휴일 제정 연도 (없으면 null)
-        "types": ["Public"]              // 공휴일 유형 배열 (Public, Bank, School, Authorities, Optional 등)
+        "countryCode": "AD",      // 국가 코드 (ISO 3166-1 alpha-2)
+        "fixed": false,           // 고정 공휴일 여부 (true: 매년 같은 날짜, false: 변동 가능)
+        "global": true,           // 전국 단위 공휴일 여부 (true: 전국, false: 지역 한정)
+        "counties": null,         // 적용 지역 목록 (global이 false일 경우 배열, 전국일 경우 null)
+        "launchYear": null,       // 공휴일 제정 연도 (없으면 null)
+        "types": ["Public"]       // 공휴일 유형 배열 (Public, Bank, School, Authorities, Optional 등)
     },
     // ... 추가 공휴일들
 ] 
