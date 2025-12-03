@@ -51,8 +51,8 @@ public class Holiday {
     private String name;
 
     // 국가
-    @JoinColumn(name = "country_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "country_id", nullable = false)
     private Country country;
 
     // 고정 공휴일 여부 (true: 매년 같은 날짜, false: 변동 가능)
