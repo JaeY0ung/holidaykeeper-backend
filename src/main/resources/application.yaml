@@ -1,0 +1,38 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: holidaykeeper-backend
+
+  datasource:
+    url: jdbc:h2:mem:holidaydb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: update # develop mode: update, deploy: validate or none
+    show-sql: false # SQL log print mode
+    properties:
+      hibernate:
+        hibernate.jdbc.batch_size: 30
+        javax.persistence.lock.timeout: 10000   # 10 seconds
+        javax.persistence.query.timeout: 10000  # 10 seconds
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true # formatting sql
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
