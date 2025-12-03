@@ -28,12 +28,12 @@
 
 # 기술 스택
 
-| 필수 스택 | Java 21 · Spring Boot 3.4 · JPA(Hibernate) |  |
-| --- | --- | --- |
-| DB | 인메모리 H2 |  |
-| 테스트 | JUnit 5 | 선택이지만 권장 |
-| 문서화 | OpenAPI 3(Swagger UI)로 직접 설계한 API 자동 노출 |  |
-| 기타 스택 | Querydsl 5, Dockerfile, GitHub Actions CI 등 자유 | 자유 |
+| 필수 스택 | Java 21 · Spring Boot 3.4 · JPA(Hibernate) | 비고 |
+| --- | --- |-----------------|
+| DB | 인메모리 H2 |                 |
+| 테스트 | JUnit 5 | 선택이지만 권장        |
+| 문서화 | OpenAPI 3(Swagger UI)로 직접 설계한 API 자동 노출 |                 |
+| 기타 스택 | Querydsl 5, Dockerfile, GitHub Actions CI 등 자유 | 자유              |
 | UI / UX | 필수 아님, 기술 스택 제한 없음 | 선택, 기술 스택 제한 없음 |
 
 
@@ -42,7 +42,7 @@
 ## 1. 국가 목록 조회
 -  엔드 포인트: https://date.nager.at/api/v3/AvailableCountries
 -  응답: 국가 정보 배열
--  응답 형식:
+-  응답 형식
 ```
 [
     {
