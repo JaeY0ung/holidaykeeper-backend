@@ -1,6 +1,7 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 
 import java.util.List;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Holiday;
 
@@ -16,7 +17,7 @@ public interface HolidayService {
     /**
      * 최근 5년 내 모든 나라의 공휴일들 저장하기
      */
-    void syncHolidaysForRecentYears();
+    HolidaySyncResponse syncHolidaysForRecentYears();
 
     /**
      * 해당 연도의 싱크 맞추기 (기존 db에 저장되어 있는 국가 공휴일 정보 제거하고 api로 다시 호출하여 저장)

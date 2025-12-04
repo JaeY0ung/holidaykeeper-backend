@@ -1,11 +1,14 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.client.NagerApiClient;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.converter.HolidayConverter;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Holiday;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dto.response.HolidayResponse;
@@ -50,9 +53,11 @@ public class HolidayServiceImpl implements HolidayService {
 
         return holidayRepository.findByCountryAndDateBetween(country, startDate, endDate);
     }
-    
+
     @Override
-    public void syncHolidaysForRecentYears() {
+    public HolidaySyncResponse syncHolidaysForRecentYears() {
+
+        LocalDateTime startTime = LocalDateTime.now();
 
         Integer startYear = DateUtil.getYearBefore(5);
         Integer endYear = DateUtil.getTodayYear();
@@ -79,8 +84,22 @@ public class HolidayServiceImpl implements HolidayService {
             }
         }
 
-        log.info("공휴일 데이터 적재 완료 - 총: {}, 성공: {}, 실패: {}",
-            totalCount, successCount, failCount);
+        LocalDateTime endTime = LocalDateTime.now();
+        long durationSeconds = ChronoUnit.SECONDS.between(startTime, endTime);
+
+        log.info("공휴일 데이터 적재 완료 - 총: {}, 성공: {}, 실패: {}, 소요: {}초",
+            totalCount, successCount, failCount, durationSeconds);
+
+        return HolidaySyncResponse.builder()
+            .totalCount(totalCount)
+            .successCount(successCount)
+            .failCount(failCount)
+            .countryCount(countryList.size())
+            .yearRange(startYear + "-" + endYear)
+            .startTime(startTime.toString())
+            .endTime(endTime.toString())
+            .durationSeconds(durationSeconds)
+            .build();
     }
 
     @Override
