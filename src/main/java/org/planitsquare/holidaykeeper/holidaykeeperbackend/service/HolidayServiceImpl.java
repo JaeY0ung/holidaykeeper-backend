@@ -50,11 +50,9 @@ public class HolidayServiceImpl implements HolidayService {
 
         return holidayRepository.findByCountryAndDateBetween(country, startDate, endDate);
     }
-
-    /**
-     * 최근 5년 내 모든 나라의 공휴일들 저장하기
-     */
-    private void syncHolidaysForRecentYears() {
+    
+    @Override
+    public void syncHolidaysForRecentYears() {
 
         Integer startYear = DateUtil.getYearBefore(5);
         Integer endYear = DateUtil.getTodayYear();
@@ -85,19 +83,17 @@ public class HolidayServiceImpl implements HolidayService {
             totalCount, successCount, failCount);
     }
 
-    /**
-     * 해당 연도의 싱크 맞추기 (기존 db에 저장되어 있는 국가 공휴일 정보 제거하고 api로 다시 호출하여 저장)
-     *
-     * @param country
-     * @param year
-     */
-    private void syncHolidaysByYear(Country country, Integer year) {
+    @Override
+    public void syncHolidaysByYear(Country country, Integer year) {
 
         LocalDate startDate = LocalDate.of(year, 1, 1);
         LocalDate endDate = LocalDate.of(year, 12, 31);
         // api로 해당 국가의 5년간 공휴일 정보 가져오기
         List<HolidayResponse> responses = nagerApiClient.fetchPublicHolidays(country.getCode(),
             year);
+        if (responses == null || responses.isEmpty()) {
+            throw new IllegalStateException("공휴일 목록 API 호출 실패: 응답이 비어있습니다");
+        }
         // 변환
         List<Holiday> holidays = responses.stream()
             .map(response -> holidayConverter.toEntity(response, country))
