@@ -1,5 +1,6 @@
 # 직접 추가
 /data
+/src/main/generated/
 # ============
 HELP.md
 .gradle
