@@ -1,6 +1,9 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.converter;
 
 import java.time.LocalDate;
+import java.util.List;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse.HolidayItemDto;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Holiday;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dto.response.HolidayResponse;
@@ -21,6 +24,24 @@ public class HolidayConverter {
             .counties(convertArrayToString(response.counties()))
             .launchYear(response.launchYear())
             .types(convertArrayToString(response.types()))
+            .build();
+    }
+
+    public HolidaySearchResponse toSearchResponse(List<Holiday> holidays) {
+
+        return HolidaySearchResponse.builder()
+            .holidays(holidays.stream()
+                .map(holiday ->
+                    HolidayItemDto.builder()
+                        .id(holiday.getId())
+                        .date(holiday.getDate())
+                        .localName(holiday.getLocalName())
+                        .name(holiday.getName())
+                        .countryId(holiday.getCountry().getId())
+                        .types(holiday.getTypesList())
+                        .build())
+                .toList()
+            )
             .build();
     }
 

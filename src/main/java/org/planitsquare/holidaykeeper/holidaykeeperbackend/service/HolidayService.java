@@ -1,6 +1,8 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 
 import java.util.List;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Holiday;
@@ -26,4 +28,12 @@ public interface HolidayService {
      * @param year
      */
     void syncHolidaysByYear(Country country, Integer year);
+
+    /**
+     * 공휴일 정보 조회
+     *
+     * @param request
+     * @return
+     */
+    HolidaySearchResponse searchHolidays(HolidaySearchRequest request);
 }
