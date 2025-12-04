@@ -8,9 +8,4 @@ public class DateUtil {
 
         return LocalDate.now().getYear();
     }
-
-    public static Integer getYearBefore(int year) {
-
-        return LocalDate.now().minusYears(year).getYear();
-    }
 }

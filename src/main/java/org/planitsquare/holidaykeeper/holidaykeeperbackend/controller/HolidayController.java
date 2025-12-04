@@ -36,7 +36,7 @@ public class HolidayController {
     @PostMapping("/sync/all")
     public ResponseEntity<HolidaySyncResponse> loadHolidayData() {
 
-        HolidaySyncResponse response = holidayService.syncHolidaysForRecentYears();
+        HolidaySyncResponse response = holidayService.syncHolidaysFor6Years();
         return ResponseEntity.ok(response);
     }
 

@@ -17,9 +17,14 @@ public interface HolidayService {
     List<Holiday> getHolidayList(String countryCode, int year);
 
     /**
+     * 최근 2년 내 모든 나라의 공휴일들 저장하기
+     */
+    HolidaySyncResponse syncHolidaysFor2Years();
+
+    /**
      * 최근 5년 내 모든 나라의 공휴일들 저장하기
      */
-    HolidaySyncResponse syncHolidaysForRecentYears();
+    HolidaySyncResponse syncHolidaysFor6Years();
 
     /**
      * 해당 연도의 싱크 맞추기 (기존 db에 저장되어 있는 국가 공휴일 정보 제거하고 api로 다시 호출하여 저장)

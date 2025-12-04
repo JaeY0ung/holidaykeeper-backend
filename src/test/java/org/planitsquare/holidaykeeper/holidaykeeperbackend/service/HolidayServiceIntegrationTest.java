@@ -27,9 +27,6 @@ class HolidayServiceIntegrationTest {
     private HolidayService holidayService;
 
     @Autowired
-    private CountryService countryService;
-
-    @Autowired
     private HolidayRepository holidayRepository;
 
     @Autowired
@@ -84,12 +81,12 @@ class HolidayServiceIntegrationTest {
 
     @Test
     @DisplayName("syncHolidaysForRecentYears - 전체 국가 최근 6년 동기화")
-    void syncHolidaysForRecentYears_syncsAllCountries() {
+    void syncHolidays_syncsAllCountries() {
         // given
         assertThat(holidayRepository.count()).isZero();
 
         // when
-        holidayService.syncHolidaysForRecentYears();
+        holidayService.syncHolidaysFor6Years();
 
         // then
         assertThat(holidayRepository.count()).isGreaterThan(0);

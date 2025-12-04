@@ -54,21 +54,36 @@ public class HolidayServiceImpl implements HolidayService {
             return holidayList;
         }
 
-        syncHolidaysForRecentYears();
+        syncHolidaysFor6Years();
 
         return holidayRepository.findByCountryAndDateBetween(country, startDate, endDate);
     }
 
     @Override
     @Transactional
-    public HolidaySyncResponse syncHolidaysForRecentYears() {
+    public HolidaySyncResponse syncHolidaysFor2Years() {
+
+        int startYear = DateUtil.getTodayYear() - 1;
+        int endYear = DateUtil.getTodayYear();
+
+        return syncHolidays(startYear, endYear);
+    }
+
+    @Override
+    @Transactional
+    public HolidaySyncResponse syncHolidaysFor6Years() {
+
+        int startYear = DateUtil.getTodayYear() - 5;
+        int endYear = DateUtil.getTodayYear();
+
+        return syncHolidays(startYear, endYear);
+    }
+
+    private HolidaySyncResponse syncHolidays(int startYear, int endYear) {
 
         LocalDateTime startTime = LocalDateTime.now();
 
-        Integer startYear = DateUtil.getYearBefore(5);
-        Integer endYear = DateUtil.getTodayYear();
-
-        log.info("공휴일 데이터 적재 시작: {} ~ {}", startYear, endYear);
+        log.info("공휴일 데이터 적재 시작: {}년 ~ {}년", startYear, endYear);
 
         List<Country> countryList = countryService.getCountryList();
 

@@ -168,8 +168,8 @@ class HolidayServiceImplTest {
                     eq(LocalDate.of(2025, 1, 1)),
                     eq(LocalDate.of(2025, 12, 31))
                 ))
-                    .thenReturn(Collections.emptyList())  // 첫 번째: 비어있음
-                    .thenReturn(List.of(holiday1, holiday2));  // 두 번째: 동기화 후
+                    .thenReturn(Collections.emptyList())
+                    .thenReturn(List.of(holiday1, holiday2));
 
                 when(countryService.getCountryList())
                     .thenReturn(List.of(korea));
@@ -183,7 +183,7 @@ class HolidayServiceImplTest {
             }
 
             @Test
-            @DisplayName("최근 5년 데이터를 동기화하고 반환한다")
+            @DisplayName("최근 6년 데이터를 동기화하고 반환한다")
             void it_syncs_and_returns() {
                 // when
                 List<Holiday> result = holidayService.getHolidayList("KR", 2025);
@@ -194,7 +194,7 @@ class HolidayServiceImplTest {
                     any());
                 verify(countryService, times(1)).getCountryList();
                 verify(nagerApiClient, times(6)).fetchPublicHolidays(anyString(),
-                    anyInt()); // 6년 (2020-2025)
+                    anyInt()); // ✅ 6년 (2020-2025)
             }
         }
 
@@ -248,7 +248,7 @@ class HolidayServiceImplTest {
             @DisplayName("모든 국가의 최근 6년(2020-2025) 공휴일을 동기화한다")
             void it_syncs_all_holidays() {
                 // when
-                holidayService.syncHolidaysForRecentYears();
+                holidayService.syncHolidaysFor6Years();  // ✅ 메서드명 변경
 
                 // then
                 // 2개 국가 × 6년(2020~2025) = 12번 API 호출
@@ -274,7 +274,7 @@ class HolidayServiceImplTest {
             @DisplayName("API를 호출하지 않는다")
             void it_does_not_call_api() {
                 // when
-                holidayService.syncHolidaysForRecentYears();
+                holidayService.syncHolidaysFor6Years();  // ✅ 메서드명 변경
 
                 // then
                 verify(nagerApiClient, never()).fetchPublicHolidays(anyString(), anyInt());
@@ -292,11 +292,23 @@ class HolidayServiceImplTest {
                 when(countryService.getCountryList())
                     .thenReturn(List.of(korea));
 
-                // 첫 번째 호출은 실패, 나머지는 성공
+                // ✅ 수정: 2020년만 실패, 나머지는 성공
                 when(nagerApiClient.fetchPublicHolidays(eq("KR"), eq(2020)))
                     .thenThrow(new RuntimeException("API 호출 실패"));
 
-                when(nagerApiClient.fetchPublicHolidays(eq("KR"), anyInt()))
+                when(nagerApiClient.fetchPublicHolidays(eq("KR"), eq(2021)))
+                    .thenReturn(List.of(holidayResponse1, holidayResponse2));
+
+                when(nagerApiClient.fetchPublicHolidays(eq("KR"), eq(2022)))
+                    .thenReturn(List.of(holidayResponse1, holidayResponse2));
+
+                when(nagerApiClient.fetchPublicHolidays(eq("KR"), eq(2023)))
+                    .thenReturn(List.of(holidayResponse1, holidayResponse2));
+
+                when(nagerApiClient.fetchPublicHolidays(eq("KR"), eq(2024)))
+                    .thenReturn(List.of(holidayResponse1, holidayResponse2));
+
+                when(nagerApiClient.fetchPublicHolidays(eq("KR"), eq(2025)))
                     .thenReturn(List.of(holidayResponse1, holidayResponse2));
 
                 when(holidayConverter.toEntity(any(HolidayResponse.class), any(Country.class)))
@@ -307,12 +319,18 @@ class HolidayServiceImplTest {
             @DisplayName("나머지 데이터는 계속 처리한다")
             void it_continues_processing() {
                 // when
-                holidayService.syncHolidaysForRecentYears();
+                holidayService.syncHolidaysFor6Years();  // ✅ 메서드명 변경
 
                 // then
                 // 6번 호출 시도 (2020~2025)
-                verify(nagerApiClient, times(6)).fetchPublicHolidays(eq("KR"), anyInt());
-                // 5번 성공 (2020 제외)
+                verify(nagerApiClient, times(1)).fetchPublicHolidays(eq("KR"), eq(2020));
+                verify(nagerApiClient, times(1)).fetchPublicHolidays(eq("KR"), eq(2021));
+                verify(nagerApiClient, times(1)).fetchPublicHolidays(eq("KR"), eq(2022));
+                verify(nagerApiClient, times(1)).fetchPublicHolidays(eq("KR"), eq(2023));
+                verify(nagerApiClient, times(1)).fetchPublicHolidays(eq("KR"), eq(2024));
+                verify(nagerApiClient, times(1)).fetchPublicHolidays(eq("KR"), eq(2025));
+
+                // 5번 성공 (2020 제외, 2021-2025 성공)
                 verify(holidayRepository, times(5)).saveAll(any());
             }
         }
