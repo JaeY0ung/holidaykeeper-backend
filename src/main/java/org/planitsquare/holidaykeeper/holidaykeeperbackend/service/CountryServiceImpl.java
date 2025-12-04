@@ -50,6 +50,10 @@ public class CountryServiceImpl implements CountryService {
     private void syncCountries() {
         // api로 국가 정보 가져오기
         List<CountryResponse> responses = nagerApiClient.fetchAvailableCountries();
+        // 빈 응답은 에러 던지기
+        if (responses == null || responses.isEmpty()) {
+            throw new IllegalStateException("국가 목록 API 호출 실패: 응답이 비어있습니다");
+        }
         // 변환
         List<Country> countries = responses.stream()
             .map(countryConverter::toEntity)
