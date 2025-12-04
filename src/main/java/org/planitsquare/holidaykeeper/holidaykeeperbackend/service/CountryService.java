@@ -17,4 +17,9 @@ public interface CountryService {
      * 나라 목록 조회
      */
     List<Country> getCountryList();
+
+    /**
+     * 싱크 맞추기 (기존 db에 저장되어 있는 국가 정보 제거하고 api로 다시 호출하여 저장)
+     */
+    void syncCountries();
 }

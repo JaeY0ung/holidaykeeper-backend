@@ -31,6 +31,7 @@ public class CountryServiceImpl implements CountryService {
     }
 
     @Override
+    @Transactional
     public List<Country> getCountryList() {
 
         List<Country> countryList = countryRepository.findAll();
@@ -44,10 +45,9 @@ public class CountryServiceImpl implements CountryService {
         return countryRepository.findAll();
     }
 
-    /**
-     * 싱크 맞추기 (기존 db에 저장되어 있는 국가 정보 제거하고 api로 다시 호출하여 저장)
-     */
-    private void syncCountries() {
+    @Override
+    @Transactional
+    public void syncCountries() {
         // api로 국가 정보 가져오기
         List<CountryResponse> responses = nagerApiClient.fetchAvailableCountries();
         // 빈 응답은 에러 던지기

@@ -60,6 +60,7 @@ public class HolidayServiceImpl implements HolidayService {
     }
 
     @Override
+    @Transactional
     public HolidaySyncResponse syncHolidaysForRecentYears() {
 
         LocalDateTime startTime = LocalDateTime.now();
@@ -108,11 +109,13 @@ public class HolidayServiceImpl implements HolidayService {
     }
 
     @Override
+    @Transactional
     public void syncHolidaysByYear(Country country, Integer year) {
 
         LocalDate startDate = LocalDate.of(year, 1, 1);
         LocalDate endDate = LocalDate.of(year, 12, 31);
-        // api로 해당 국가의 5년간 공휴일 정보 가져오기
+
+        // api로 해당 국가의 해당 연도의 공휴일 정보 가져오기
         List<HolidayResponse> responses = nagerApiClient.fetchPublicHolidays(
             country.getCode(),
             year);
@@ -126,7 +129,7 @@ public class HolidayServiceImpl implements HolidayService {
             .map(response -> holidayConverter.toEntity(response, country))
             .toList();
 
-        // 기존에 저장되어 있던 해당 국가의 5년간 공휴일 모두 삭제
+        // 기존에 저장되어 있던 해당 국가의 해당 연도의 공휴일 모두 삭제
         holidayRepository.deleteByCountryAndDateBetween(country, startDate, endDate);
 
         // 저장
