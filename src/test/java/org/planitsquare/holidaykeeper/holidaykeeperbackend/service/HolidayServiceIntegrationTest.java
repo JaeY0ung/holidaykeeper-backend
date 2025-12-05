@@ -14,12 +14,12 @@ import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.Coun
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.HolidayRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
-@ActiveProfiles("test")
+@Sql(scripts = "/clean-database.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @DisplayName("HolidayService 통합 테스트")
 class HolidayServiceIntegrationTest {
 
