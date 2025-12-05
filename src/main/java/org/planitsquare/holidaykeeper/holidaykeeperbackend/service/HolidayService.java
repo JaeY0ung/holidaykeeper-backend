@@ -1,22 +1,13 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 
-import java.util.List;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayDeleteResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
-import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Holiday;
 
 public interface HolidayService {
-
-    /**
-     * 나라 코드에 맞는 공휴일 목록 조회
-     *
-     * @param countryCode
-     */
-    List<Holiday> getHolidayList(String countryCode, int year);
 
     /**
      * 최근 2년 내 모든 나라의 공휴일들 저장하기

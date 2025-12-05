@@ -39,29 +39,6 @@ public class HolidayServiceImpl implements HolidayService {
     private final HolidayConverter holidayConverter;
 
     @Override
-    public List<Holiday> getHolidayList(String countryCode, int year) {
-
-        Country country = countryService.getCountryByCode(countryCode);
-
-        LocalDate startDate = LocalDate.of(year, 1, 1);
-        LocalDate endDate = LocalDate.of(year, 12, 31);
-
-        List<Holiday> holidayList = holidayRepository.findByCountryAndDateBetween(
-            country,
-            startDate,
-            endDate);
-
-        if (!holidayList.isEmpty()) {
-            log.info("공휴일 목록 조회 완료: {} 개", holidayList.size());
-            return holidayList;
-        }
-
-        syncHolidaysFor6Years();
-
-        return holidayRepository.findByCountryAndDateBetween(country, startDate, endDate);
-    }
-
-    @Override
     @Transactional
     public HolidaySyncResponse syncHolidaysFor2Years() {
 
