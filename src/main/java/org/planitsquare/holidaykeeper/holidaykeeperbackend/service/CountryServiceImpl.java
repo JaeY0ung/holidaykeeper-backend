@@ -36,13 +36,8 @@ public class CountryServiceImpl implements CountryService {
 
         List<Country> countryList = countryRepository.findAll();
 
-        if (!countryList.isEmpty()) {
-            log.info("국가 목록 조회 완료: {} 개국", countryList.size());
-            return countryList;
-        }
-        log.info("국가 데이터가 없습니다. 외부 API에서 데이터를 가져옵니다.");
-        syncCountries();
-        return countryRepository.findAll();
+        log.info("국가 목록 조회 완료: {} 개국", countryList.size());
+        return countryList;
     }
 
     @Override
