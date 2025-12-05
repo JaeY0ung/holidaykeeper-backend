@@ -48,7 +48,8 @@ public record HolidaySearchRequest(
             - OBSERVANCE: 기념일 (유급 휴일 아님)
             """,
         example = "[\"PUBLIC\", \"BANK\"]",
-        allowableValues = { "PUBLIC", "BANK", "SCHOOL", "AUTHORITIES", "OPTIONAL", "OBSERVANCE" }
+        allowableValues = { "PUBLIC", "BANK", "SCHOOL", "AUTHORITIES", "OPTIONAL", "OBSERVANCE" },
+        nullable = true
     )
     @Size(max = 6, message = "최대 6개의 타입까지 선택 가능합니다")
     List<HolidayType> types
