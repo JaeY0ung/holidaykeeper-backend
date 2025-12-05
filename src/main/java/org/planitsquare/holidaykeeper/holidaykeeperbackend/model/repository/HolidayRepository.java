@@ -20,7 +20,7 @@ public interface HolidayRepository extends JpaRepository<Holiday, Long> {
     @Query("DELETE FROM Holiday h " +
         "WHERE h.country = :country " +
         "AND h.date BETWEEN :startDate AND :endDate")
-    void deleteByCountryAndDateBetween(
+    int deleteByCountryAndDateBetween(
         @Param("country") Country country,
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate

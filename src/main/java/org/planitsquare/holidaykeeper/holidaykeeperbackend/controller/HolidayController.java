@@ -6,14 +6,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayDeleteResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.service.HolidayService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -57,4 +61,20 @@ public class HolidayController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+        summary = "공휴일 삭제",
+        description = "연도, 국가 코드로 공휴일을 삭제합니다"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "삭제 성공"),
+        @ApiResponse(responseCode = "400", description = "잘못된 파라미터")
+    })
+    @DeleteMapping
+    public ResponseEntity<HolidayDeleteResponse> searchHolidayData(
+        @Valid @RequestBody HolidayDeleteRequest request
+    ) {
+
+        HolidayDeleteResponse response = holidayService.deleteHolidays(request);
+        return ResponseEntity.ok(response);
+    }
 }

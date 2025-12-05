@@ -1,7 +1,9 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 
 import java.util.List;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayDeleteResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
@@ -41,4 +43,12 @@ public interface HolidayService {
      * @return
      */
     HolidaySearchResponse searchHolidays(HolidaySearchRequest request);
+
+    /**
+     * 공휴일 삭제
+     *
+     * @param request
+     * @return
+     */
+    HolidayDeleteResponse deleteHolidays(HolidayDeleteRequest request);
 }

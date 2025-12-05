@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.client.NagerApiClient;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.converter.HolidayConverter;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayDeleteResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
@@ -180,5 +182,25 @@ public class HolidayServiceImpl implements HolidayService {
         }
         // 변환
         return holidayConverter.toSearchResponse(holidays);
+    }
+
+    @Override
+    @Transactional
+    public HolidayDeleteResponse deleteHolidays(HolidayDeleteRequest request) {
+
+        // 삭제할 국가
+        Country country = countryService.getCountryByCode(request.countryCode());
+
+        // 삭제할 기간
+        LocalDate startDate = LocalDate.of(request.year(), 1, 1);
+        LocalDate endDate = LocalDate.of(request.year(), 12, 31);
+
+        // 삭제
+        int deletedCount = holidayRepository.deleteByCountryAndDateBetween(country, startDate,
+            endDate);
+
+        return HolidayDeleteResponse.builder()
+            .deletedCount(deletedCount)
+            .build();
     }
 }
