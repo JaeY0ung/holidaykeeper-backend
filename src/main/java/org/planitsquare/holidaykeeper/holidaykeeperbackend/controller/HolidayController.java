@@ -70,7 +70,7 @@ public class HolidayController {
         @ApiResponse(responseCode = "400", description = "잘못된 파라미터")
     })
     @DeleteMapping
-    public ResponseEntity<HolidayDeleteResponse> searchHolidayData(
+    public ResponseEntity<HolidayDeleteResponse> deleteHolidayData(
         @Valid @RequestBody HolidayDeleteRequest request
     ) {
 
