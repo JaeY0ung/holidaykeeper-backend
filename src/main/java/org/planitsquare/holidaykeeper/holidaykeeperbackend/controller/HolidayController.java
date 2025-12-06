@@ -12,10 +12,10 @@ import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.Ho
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.service.HolidayService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -54,7 +54,7 @@ public class HolidayController {
     })
     @GetMapping
     public ResponseEntity<HolidaySearchResponse> searchHolidayData(
-        @Valid @ModelAttribute HolidaySearchRequest request
+        @Valid @ParameterObject HolidaySearchRequest request
     ) {
 
         HolidaySearchResponse response = holidayService.searchHolidays(request);

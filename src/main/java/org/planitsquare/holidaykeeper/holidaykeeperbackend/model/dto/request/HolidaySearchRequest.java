@@ -47,12 +47,25 @@ public record HolidaySearchRequest(
             - OPTIONAL: 대부분 휴무 (선택적)
             - OBSERVANCE: 기념일 (유급 휴일 아님)
             """,
-        example = "[\"PUBLIC\", \"BANK\"]",
-        allowableValues = { "PUBLIC", "BANK", "SCHOOL", "AUTHORITIES", "OPTIONAL", "OBSERVANCE" },
+        example = "PUBLIC",
         nullable = true
     )
     @Size(max = 6, message = "최대 6개의 타입까지 선택 가능합니다")
-    List<HolidayType> types
+    List<HolidayType> types,
+
+    @Schema(
+        description = "페이지 번호 (0부터 시작)",
+        example = "0",
+        defaultValue = "0"
+    )
+    Integer page,
+
+    @Schema(
+        description = "페이지 크기 (한 페이지당 항목 수)",
+        example = "20",
+        defaultValue = "20"
+    )
+    Integer size
 ) {
 
     public HolidaySearchRequest {
