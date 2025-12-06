@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dt
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.HolidayQueryRepository;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.HolidayRepository;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.utility.DateUtil;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -113,32 +115,38 @@ public class HolidayServiceImpl implements HolidayService {
 
         List<Country> countryList = countryService.getCountryList();
 
-        int totalCount = 0;
-        int successCount = 0;
-        int failCount = 0;
+        List<CompletableFuture<SyncResult>> futures = new java.util.ArrayList<>();
 
         for (Country country : countryList) {
-            for (Integer year = startYear; year <= endYear; year++) {
-                totalCount++;
-                try {
-                    syncHolidaysByYear(country, year);
-                    successCount++;
-                    log.debug("성공: {} - {}", country.getCode(), year);
-                } catch (Exception e) {
-                    failCount++;
-                    log.warn("실패: {} - {} ({})", country.getCode(), year, e.getMessage());
-                }
+            for (int year = startYear; year <= endYear; year++) {
+
+                int finalYear = year;
+
+                CompletableFuture<SyncResult> future =
+                    syncHolidaysByYearAsync(country, year)
+                        .exceptionally(ex -> {
+                            log.warn("공휴일 동기화 실패: {} - {} ({})",
+                                country.getCode(), finalYear, ex.getMessage());
+                            return null;
+                        });
+
+                futures.add(future);
             }
         }
+
+        // 모든 비동기 작업 완료 대기
+        List<SyncResult> results = futures.stream()
+            .map(CompletableFuture::join)
+            .toList();
+
+        int successCount = (int) results.stream().filter(r -> r != null).count();
+        int failCount = results.size() - successCount;
 
         LocalDateTime endTime = LocalDateTime.now();
         long durationSeconds = ChronoUnit.SECONDS.between(startTime, endTime);
 
-        log.info("공휴일 데이터 적재 완료 - 총: {}, 성공: {}, 실패: {}, 소요: {}초",
-            totalCount, successCount, failCount, durationSeconds);
-
         return HolidaySyncResponse.builder()
-            .totalCount(totalCount)
+            .totalCount(results.size())
             .successCount(successCount)
             .failCount(failCount)
             .countryCount(countryList.size())
@@ -147,6 +155,16 @@ public class HolidayServiceImpl implements HolidayService {
             .endTime(endTime.toString())
             .durationSeconds(durationSeconds)
             .build();
+    }
+
+
+    @Transactional
+    @Async("holidayExecutor")
+    public CompletableFuture<SyncResult> syncHolidaysByYearAsync(Country country, Integer year) {
+
+        SyncResult result = syncHolidaysByYear(country, year);
+
+        return CompletableFuture.completedFuture(result);
     }
 
     private SyncResult syncHolidaysByYear(Country country, Integer year) {
