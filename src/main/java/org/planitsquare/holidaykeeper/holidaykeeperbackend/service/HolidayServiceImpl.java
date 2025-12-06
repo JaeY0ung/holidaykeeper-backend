@@ -135,30 +135,37 @@ public class HolidayServiceImpl implements HolidayService {
 
         Country country = countryService.getCountryByCode(request.countryCode());
 
-        // db 에서 공휴일 정보 조회
-        List<Holiday> holidays;
-        if (request.types() == null || request.types().isEmpty()) {
-            // JPA 쿼리 메서드 기반 조회
-            holidays = holidayRepository.findByCountryAndDateBetween(
-                country,
-                request.startDate(),
-                request.endDate());
-
-        } else {
-            List<String> typeValues = request.types()
-                .stream()
-                .map(HolidayType::getValue) // → "School", "Authorities" 등
+        List<String> typeValues = (request.types() == null || request.types().isEmpty())
+            ? null
+            : request.types().stream()
+                .map(HolidayType::getValue)
                 .toList();
-            // QueryDSL 동적 쿼리 기반 조회
-            holidays = holidayQueryRepository.search(
-                country,
-                request.startDate(),
-                request.endDate(),
-                typeValues
-            );
-        }
-        // 변환
-        return holidayConverter.toSearchResponse(holidays);
+
+        // 1. 페이징 적용하여 데이터 조회
+        List<Holiday> holidays = holidayQueryRepository.searchWithPaging(
+            country,
+            request.startDate(),
+            request.endDate(),
+            typeValues,
+            request.page(),
+            request.size()
+        );
+
+        // 2. 전체 개수 조회 (페이지 정보를 위해)
+        long totalElements = holidayQueryRepository.count(
+            country,
+            request.startDate(),
+            request.endDate(),
+            typeValues
+        );
+
+        // 3. 변환 및 반환
+        return holidayConverter.toSearchResponseWithPaging(
+            holidays,
+            request.page(),
+            request.size(),
+            totalElements
+        );
     }
 
     @Override

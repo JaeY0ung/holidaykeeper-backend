@@ -14,8 +14,42 @@ public record HolidaySearchResponse(
         arraySchema = @Schema(description = "검색된 공휴일 목록"),
         schema = @Schema(implementation = HolidayItemDto.class)
     )
-    List<HolidayItemDto> holidays
+    List<HolidayItemDto> holidays,
+
+    @Schema(description = "페이지 정보")
+    PageInfo pageInfo
 ) {
+
+    @Schema(description = "페이지 메타데이터")
+    @Builder
+    public record PageInfo(
+
+        @Schema(description = "현재 페이지 번호 (0부터 시작)", example = "0")
+        int currentPage,
+
+        @Schema(description = "한 페이지당 항목 수", example = "20")
+        int pageSize,
+
+        @Schema(description = "현재 페이지의 항목 수", example = "20")
+        int numberOfElements,
+
+        @Schema(description = "전체 항목 수", example = "150")
+        long totalElements,
+
+        @Schema(description = "전체 페이지 수", example = "8")
+        int totalPages,
+
+        @Schema(description = "첫 페이지 여부", example = "true")
+        boolean isFirst,
+
+        @Schema(description = "마지막 페이지 여부", example = "false")
+        boolean isLast,
+
+        @Schema(description = "비어있는지 여부", example = "false")
+        boolean isEmpty
+    ) {
+
+    }
 
     @Schema(description = "공휴일 검색 결과 상세 DTO")
     @Builder

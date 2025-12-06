@@ -73,5 +73,17 @@ public record HolidaySearchRequest(
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new IllegalArgumentException("시작 날짜는 종료 날짜보다 이전이어야 합니다");
         }
+
+        // 페이지 기본값 설정
+        if (page == null || page < 0) {
+            page = 0;
+        }
+
+        // 페이지 크기 기본값 설정 (1 ~ 100 사이)
+        if (size == null || size < 1) {
+            size = 20;
+        } else if (size > 100) {
+            size = 100;
+        }
     }
 }
