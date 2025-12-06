@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import lombok.NonNull;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.enums.HolidayType;
 
 @Schema(description = "공휴일 검색 요청")
@@ -17,6 +18,7 @@ public record HolidaySearchRequest(
         requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotNull(message = "시작 날짜는 필수입니다")
+    @NonNull
     LocalDate startDate,
 
     @Schema(
@@ -25,6 +27,7 @@ public record HolidaySearchRequest(
         requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotNull(message = "종료 날짜는 필수입니다")
+    @NonNull
     LocalDate endDate,
 
     @Schema(
@@ -35,6 +38,7 @@ public record HolidaySearchRequest(
     )
     @NotNull(message = "국가 코드는 필수입니다")
     @Pattern(regexp = "^[A-Z]{2}$", message = "국가 코드는 2자리 대문자 알파벳이어야 합니다")
+    @NonNull
     String countryCode,
 
     @Schema(
@@ -70,8 +74,17 @@ public record HolidaySearchRequest(
 
     public HolidaySearchRequest {
 
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("시작 날짜는 종료 날짜보다 이전이어야 합니다");
+        if (startDate.isBefore(LocalDate.of(1975, 1, 1))) {
+            throw new IllegalArgumentException("시작 날짜의 연도는 1975년 이상이어야 합니다.");
+        }
+
+        // 시작 날짜 < 끝 날짜 유효성 검사
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("검색 시작 날짜는 종료 날짜보다 이전이어야 합니다");
+        }
+
+        if (endDate.getYear() > LocalDate.now().getYear()) {
+            throw new IllegalArgumentException("검색 종료 연도는 현재 연도보다 클 수 없습니다.");
         }
 
         // 페이지 기본값 설정
