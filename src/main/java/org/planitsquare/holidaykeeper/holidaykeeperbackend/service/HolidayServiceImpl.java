@@ -156,8 +156,7 @@ public class HolidayServiceImpl implements HolidayService {
             .durationSeconds(durationSeconds)
             .build();
     }
-
-
+    
     @Transactional
     @Async("holidayExecutor")
     public CompletableFuture<SyncResult> syncHolidaysByYearAsync(Country country, Integer year) {
