@@ -1,6 +1,7 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -76,7 +77,7 @@ public record HolidaySearchRequest(
     @NotNull(message = "페이지 크기는 필수입니다")
     @NonNull
     @Min(value = 5, message = "페이지 크기는 5 이상이여야 합니다.")
-    @Min(value = 100, message = "페이지 크기는 100 이하여야 합니다.")
+    @Max(value = 100, message = "페이지 크기는 100 이하여야 합니다.")
     Integer size
 ) {
 
