@@ -1,6 +1,7 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -62,6 +63,9 @@ public record HolidaySearchRequest(
         example = "0",
         defaultValue = "0"
     )
+    @NotNull(message = "페이지 번호는 필수입니다")
+    @NonNull
+    @Min(value = 0, message = "페이지 번호는 0 이상이여야 합니다.")
     Integer page,
 
     @Schema(
@@ -69,6 +73,10 @@ public record HolidaySearchRequest(
         example = "20",
         defaultValue = "20"
     )
+    @NotNull(message = "페이지 크기는 필수입니다")
+    @NonNull
+    @Min(value = 5, message = "페이지 크기는 5 이상이여야 합니다.")
+    @Min(value = 100, message = "페이지 크기는 100 이하여야 합니다.")
     Integer size
 ) {
 
@@ -85,18 +93,6 @@ public record HolidaySearchRequest(
 
         if (endDate.getYear() > LocalDate.now().getYear()) {
             throw new IllegalArgumentException("검색 종료 연도는 현재 연도보다 클 수 없습니다.");
-        }
-
-        // 페이지 기본값 설정
-        if (page == null || page < 0) {
-            page = 0;
-        }
-
-        // 페이지 크기 기본값 설정 (1 ~ 100 사이)
-        if (size == null || size < 1) {
-            size = 20;
-        } else if (size > 100) {
-            size = 100;
         }
     }
 }
