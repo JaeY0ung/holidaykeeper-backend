@@ -3,14 +3,20 @@ package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.client.NagerApiClient;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.converter.HolidayConverter;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayRefreshRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayDeleteResponse;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayRefreshResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
@@ -38,6 +44,32 @@ public class HolidayServiceImpl implements HolidayService {
 
     private final HolidayConverter holidayConverter;
 
+    @Builder
+    private record SyncResult(
+        int oldCount,            // 이전에 저장되었던 레코드 수
+        int newCount,            // 새롭게 재동기화된 후의 레코드 수
+        int actualDeletedCount,  // 실제로 DB에서 삭제된 레코드 수
+        int actualAddedCount    // 실제로 DB에 저장된 레코드 수
+    ) {
+
+    }
+
+    /**
+     * 공휴일 내용 비교를 위한 record
+     */
+    private record HolidayContent(
+        LocalDate date,
+        String localName,
+        String name,
+        Boolean fixed,
+        String counties,
+        Integer launchYear,
+        String types
+    ) {
+
+    }
+
+
     @Override
     @Transactional
     public HolidaySyncResponse syncHolidaysFor2Years() {
@@ -46,6 +78,21 @@ public class HolidayServiceImpl implements HolidayService {
         int endYear = DateUtil.getTodayYear();
 
         return syncHolidays(startYear, endYear);
+    }
+
+    @Override
+    public HolidayRefreshResponse refreshHolidays(HolidayRefreshRequest request) {
+
+        Country country = countryService.getCountryByCode(request.countryCode());
+
+        SyncResult syncResult = syncHolidaysByYear(country, request.year());
+
+        return HolidayRefreshResponse.builder()
+            .oldCount(syncResult.oldCount())
+            .newCount(syncResult.newCount)
+            .actualDeletedCount(syncResult.actualDeletedCount())
+            .actualAddedCount(syncResult.actualAddedCount())
+            .build();
     }
 
     @Override
@@ -102,14 +149,16 @@ public class HolidayServiceImpl implements HolidayService {
             .build();
     }
 
-    @Override
-    @Transactional
-    public void syncHolidaysByYear(Country country, Integer year) {
+    private SyncResult syncHolidaysByYear(Country country, Integer year) {
 
         LocalDate startDate = LocalDate.of(year, 1, 1);
         LocalDate endDate = LocalDate.of(year, 12, 31);
 
-        // api로 해당 국가의 해당 연도의 공휴일 정보 가져오기
+        // 기존 데이터 조회
+        List<Holiday> oldHolidays = holidayRepository.findByCountryAndDateBetween(
+            country, startDate, endDate);
+
+        // API로 새 데이터 가져오기
         List<HolidayResponse> responses = nagerApiClient.fetchPublicHolidays(
             country.getCode(),
             year);
@@ -119,15 +168,58 @@ public class HolidayServiceImpl implements HolidayService {
         }
 
         // 변환
-        List<Holiday> holidays = responses.stream()
+        List<Holiday> newHolidays = responses.stream()
             .map(response -> holidayConverter.toEntity(response, country))
             .toList();
 
-        // 기존에 저장되어 있던 해당 국가의 해당 연도의 공휴일 모두 삭제
-        holidayRepository.deleteByCountryAndDateBetween(country, startDate, endDate);
+        // Set으로 변환하여 비교
+        Set<HolidayContent> oldSet = oldHolidays.stream()
+            .map(this::toHolidayContent)
+            .collect(Collectors.toSet());
+
+        Set<HolidayContent> newSet = newHolidays.stream()
+            .map(this::toHolidayContent)
+            .collect(Collectors.toSet());
+
+        // 실제 삭제된 것 (old에는 있는데 new에는 없음)
+        Set<HolidayContent> actualDeleted = new HashSet<>(oldSet);
+        actualDeleted.removeAll(newSet);
+
+        // 실제 추가된 것 (new에는 있는데 old에는 없음)
+        Set<HolidayContent> actualAdded = new HashSet<>(newSet);
+        actualAdded.removeAll(oldSet);
+
+        // 기존 데이터 삭제
+        int deletedCount = holidayRepository.deleteByCountryAndDateBetween(
+            country,
+            startDate,
+            endDate);
 
         // 저장
-        holidayRepository.saveAll(holidays);
+        List<Holiday> saved = holidayRepository.saveAll(newHolidays);
+
+        return SyncResult.builder()
+            .oldCount(deletedCount)
+            .newCount(saved.size())
+            .actualAddedCount(actualAdded.size())
+            .actualDeletedCount(actualDeleted.size())
+            .build();
+    }
+
+    /**
+     * Holiday를 비교 가능한 객체로 변환
+     */
+    private HolidayContent toHolidayContent(Holiday holiday) {
+
+        return new HolidayContent(
+            holiday.getDate(),
+            holiday.getLocalName(),
+            holiday.getName(),
+            holiday.getFixed(),
+            holiday.getCounties(),
+            holiday.getLaunchYear(),
+            holiday.getTypes()
+        );
     }
 
     @Override

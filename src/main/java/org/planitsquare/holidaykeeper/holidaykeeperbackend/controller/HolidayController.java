@@ -7,8 +7,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayRefreshRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayDeleteResponse;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayRefreshResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.service.HolidayService;
@@ -41,6 +43,23 @@ public class HolidayController {
     public ResponseEntity<HolidaySyncResponse> loadHolidayData() {
 
         HolidaySyncResponse response = holidayService.syncHolidaysFor6Years();
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "공휴일 재동기화",
+        description = "연도, 국가 코드로 공휴일을 재동기화합니다"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "재동기화 성공"),
+        @ApiResponse(responseCode = "400", description = "잘못된 파라미터")
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<HolidayRefreshResponse> refreshHolidayData(
+        @Valid @RequestBody HolidayRefreshRequest request
+    ) {
+
+        HolidayRefreshResponse response = holidayService.refreshHolidays(request);
         return ResponseEntity.ok(response);
     }
 
