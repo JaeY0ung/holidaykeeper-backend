@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.service.HolidayService;
-import org.planitsquare.holidaykeeper.holidaykeeperbackend.utility.DateUtil;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -26,9 +25,6 @@ public class HolidaySyncScheduler {
         log.info("========================================");
         log.info("공휴일 자동 동기화 시작: {}", LocalDateTime.now(ZoneId.of("Asia/Seoul")));
         log.info("========================================");
-
-        int startYear = DateUtil.getTodayYear() - 1;
-        int endYear = DateUtil.getTodayYear();
 
         try {
             HolidaySyncResponse response = holidayService.syncHolidaysFor2Years();
