@@ -308,9 +308,7 @@ public class HolidayServiceImpl implements HolidayService {
         List<Holiday> newHolidays = holidayResponses.stream()
             .map(r -> holidayConverter.toEntity(r, country))
             .collect(Collectors.toMap(
-                h -> h.getDate()
-                    + "|" + h.getName()
-                    + "|" + (h.getCounties() == null ? "" : h.getCounties()),
+                this::buildKey,
                 h -> h,
                 (h1, h2) -> h1   // 중복 key 발생 시 첫 번째 값 유지
             ))
@@ -321,19 +319,13 @@ public class HolidayServiceImpl implements HolidayService {
         // 3. Key 기준 Map 생성
         Map<String, Holiday> oldMap = oldHolidays.stream()
             .collect(Collectors.toMap(
-                h -> h.getCountry().getCode()
-                    + "|" + h.getDate()
-                    + "|" + h.getName()
-                    + "|" + (h.getCounties() == null ? "" : h.getCounties()),
+                this::buildKey,
                 h -> h
             ));
 
         Map<String, Holiday> newMap = newHolidays.stream()
             .collect(Collectors.toMap(
-                h -> h.getCountry().getCode()
-                    + "|" + h.getDate()
-                    + "|" + h.getName()
-                    + "|" + (h.getCounties() == null ? "" : h.getCounties()),
+                this::buildKey,
                 h -> h
             ));
 
@@ -390,6 +382,13 @@ public class HolidayServiceImpl implements HolidayService {
             .actualAddedCount(insertCount)
             .actualDeletedCount(deleteCount)
             .build();
+    }
+
+    private String buildKey(Holiday h) {
+
+        return h.getCountry().getCode()
+            + "|" + h.getDate()
+            + "|" + h.getName();
     }
 
     private boolean isSameContent(Holiday oldH, Holiday newH) {

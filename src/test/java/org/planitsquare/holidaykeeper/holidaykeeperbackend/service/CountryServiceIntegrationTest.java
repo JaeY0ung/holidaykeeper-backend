@@ -11,10 +11,8 @@ import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.Coun
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.jdbc.Sql;
-import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
-@Transactional
 @Sql(scripts = "/clean-database.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @DisplayName("CountryService 통합 테스트")
 class CountryServiceIntegrationTest {
