@@ -8,10 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dto.response.CountryResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@ActiveProfiles("test")
 @DisplayName("NagerApiClient 통합 테스트")
 class NagerApiClientIntegrationTest {
 

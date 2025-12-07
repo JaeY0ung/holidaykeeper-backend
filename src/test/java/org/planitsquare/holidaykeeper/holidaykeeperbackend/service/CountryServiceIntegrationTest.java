@@ -32,8 +32,8 @@ class CountryServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("국가 목록 전체 플로우 테스트 - DB 비어있을 때 API 호출하여 저장")
-    void getCountryList_fullFlow() {
+    @DisplayName("DB 비어있으면 빈 리스트 반환")
+    void getCountryList_emptyDb_returnsEmptyList() {
         // given
         assertThat(countryRepository.count()).isZero();
 
@@ -41,8 +41,7 @@ class CountryServiceIntegrationTest {
         List<Country> result = countryService.getCountryList();
 
         // then
-        assertThat(result).isNotEmpty();
-        assertThat(countryRepository.count()).isGreaterThan(0);
+        assertThat(result).isEmpty();
     }
 
     @Test

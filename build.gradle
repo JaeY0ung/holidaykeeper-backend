@@ -48,6 +48,11 @@ dependencies {
     // Test
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+    testImplementation 'org.assertj:assertj-core:3.25.3'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 }
 
 def generated = "src/main/generated"

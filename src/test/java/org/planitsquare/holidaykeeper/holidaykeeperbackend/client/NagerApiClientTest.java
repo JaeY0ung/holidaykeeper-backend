@@ -7,15 +7,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.BusinessException;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.ErrorCode;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dto.response.CountryResponse;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,13 +27,7 @@ class NagerApiClientTest {
 
     @InjectMocks
     private NagerApiClient nagerApiClient;
-
-    @BeforeEach
-    void setUp() {
-
-        ReflectionTestUtils.setField(nagerApiClient, "baseUrl", "https://date.nager.at/api/v3");
-    }
-
+    
     @Test
     @DisplayName("국가 목록 조회 성공 - 정상 응답 처리")
     void fetchAvailableCountries_success() {
@@ -64,8 +58,8 @@ class NagerApiClientTest {
 
         // when & then
         assertThatThrownBy(() -> nagerApiClient.fetchAvailableCountries())
-            .isInstanceOf(RuntimeException.class)
-            .hasMessageContaining("국가 목록 조회 실패");
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining(ErrorCode.COUNTRY_API_CALL_FAILED.getMessage());
     }
 
     @Test

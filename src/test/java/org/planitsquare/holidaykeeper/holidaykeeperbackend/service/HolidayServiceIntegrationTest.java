@@ -8,8 +8,17 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.BusinessException;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.ErrorCode;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayRefreshRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayDeleteResponse;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidayRefreshResponse;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySearchResponse;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.response.HolidaySyncResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
-import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Holiday;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.enums.HolidayType;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.CountryRepository;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.HolidayRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,19 +29,15 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @Transactional
 @Sql(scripts = "/clean-database.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-@DisplayName("HolidayService 통합 테스트")
+@DisplayName("HolidayService 통합 테스트 전체")
 class HolidayServiceIntegrationTest {
 
     @Autowired
     private HolidayService holidayService;
-
     @Autowired
     private HolidayRepository holidayRepository;
-
     @Autowired
     private CountryRepository countryRepository;
-
-    private Country korea;
 
     @BeforeEach
     void setUp() {
@@ -40,8 +45,7 @@ class HolidayServiceIntegrationTest {
         holidayRepository.deleteAll();
         countryRepository.deleteAll();
 
-        // 한국 데이터 생성
-        korea = countryRepository.save(
+        Country korea = countryRepository.save(
             Country.builder()
                 .code("KR")
                 .name("South Korea")
@@ -49,166 +53,230 @@ class HolidayServiceIntegrationTest {
         );
     }
 
-    @Test
-    @DisplayName("getHolidayList - DB에 데이터가 없으면 자동 동기화 후 반환")
-    void getHolidayList_autoSyncWhenEmpty() {
-        // given
-        assertThat(holidayRepository.count()).isZero();
-
-        // when
-        List<Holiday> result = holidayService.getHolidayList("KR", 2025);
-
-        // then
-        assertThat(result).isNotEmpty();
-        assertThat(result).allMatch(h -> h.getCountry().getCode().equals("KR"));
-        assertThat(result).allMatch(h -> h.getDate().getYear() == 2025);
-    }
+    // ---------------------------------------------------------
+    // 1) 검색 기능 테스트
+    // ---------------------------------------------------------
 
     @Test
-    @DisplayName("getHolidayList - DB에 데이터가 있으면 DB에서 조회")
-    void getHolidayList_returnsFromDbWhenExists() {
-        // given
-        holidayService.syncHolidaysByYear(korea, 2025);
-        long countBefore = holidayRepository.count();
+    @DisplayName("검색: DB 비어있으면 자동 동기화 후 반환")
+    void search_autoSync() {
 
-        // when
-        List<Holiday> result = holidayService.getHolidayList("KR", 2025);
-
-        // then
-        assertThat(result).isNotEmpty();
-        assertThat(holidayRepository.count()).isEqualTo(countBefore); // 추가 동기화 안 됨
-    }
-
-    @Test
-    @DisplayName("syncHolidaysForRecentYears - 전체 국가 최근 6년 동기화")
-    void syncHolidays_syncsAllCountries() {
-        // given
-        assertThat(holidayRepository.count()).isZero();
-
-        // when
-        holidayService.syncHolidaysFor6Years();
-
-        // then
-        assertThat(holidayRepository.count()).isGreaterThan(0);
-    }
-
-    @Test
-    @DisplayName("syncHolidaysByYear - 특정 국가/연도 공휴일 동기화")
-    void syncHolidaysByYear_syncsSpecificYear() {
-        // given
-        assertThat(holidayRepository.count()).isZero();
-
-        // when
-        holidayService.syncHolidaysByYear(korea, 2025);
-
-        // then
-        List<Holiday> holidays = holidayRepository.findAll();
-        assertThat(holidays).isNotEmpty();
-        assertThat(holidays).allMatch(h -> h.getCountry().getCode().equals("KR"));
-        assertThat(holidays).allMatch(h -> h.getDate().getYear() == 2025);
-    }
-
-    @Test
-    @DisplayName("syncHolidaysByYear - 기존 데이터 삭제 후 재저장")
-    void syncHolidaysByYear_replacesExistingData() {
-        // given
-        holidayService.syncHolidaysByYear(korea, 2025);
-        long countBefore = holidayRepository.count();
-        assertThat(countBefore).isGreaterThan(0);
-
-        // when - 재동기화
-        holidayService.syncHolidaysByYear(korea, 2025);
-
-        // then
-        long countAfter = holidayRepository.count();
-        assertThat(countAfter).isGreaterThan(0);
-        // 같은 연도 데이터는 덮어써짐
-    }
-
-    @Test
-    @DisplayName("syncHolidaysByYear - 연도별 데이터 분리 저장")
-    void syncHolidaysByYear_separatesDataByYear() {
-        // given - 2024년과 2025년 데이터 저장
-        holidayService.syncHolidaysByYear(korea, 2024);
-        holidayService.syncHolidaysByYear(korea, 2025);
-
-        // when - 전체 조회
-        List<Holiday> all2024 = holidayRepository.findByCountryAndDateBetween(
-            korea,
-            LocalDate.of(2024, 1, 1),
-            LocalDate.of(2024, 12, 31)
-        );
-        List<Holiday> all2025 = holidayRepository.findByCountryAndDateBetween(
-            korea,
+        HolidaySearchRequest req = new HolidaySearchRequest(
             LocalDate.of(2025, 1, 1),
-            LocalDate.of(2025, 12, 31)
+            LocalDate.of(2025, 12, 31),
+            "KR",
+            null,
+            0,
+            20
         );
 
-        // then
-        assertThat(all2024).isNotEmpty();
-        assertThat(all2025).isNotEmpty();
-        assertThat(all2024).allMatch(h -> h.getDate().getYear() == 2024);
-        assertThat(all2025).allMatch(h -> h.getDate().getYear() == 2025);
+        HolidaySearchResponse res = holidayService.searchHolidays(req);
+
+        assertThat(res.holidays()).isNotEmpty();
+        assertThat(res.pageInfo()).isNotNull();
+        assertThat(res.holidays()).allMatch(h -> h.date().getYear() == 2025);
     }
 
     @Test
-    @DisplayName("한국 신정(1월 1일) 데이터 검증")
-    void verifyKoreaNewYearHoliday() {
-        // given
-        holidayService.syncHolidaysByYear(korea, 2025);
+    @DisplayName("검색: DB 데이터 있으면 DB에서 조회")
+    void search_returnsFromDbWhenExists() {
 
-        // when
-        List<Holiday> holidays = holidayRepository.findAll();
-        Holiday newYear = holidays.stream()
-            .filter(h -> h.getDate().equals(LocalDate.of(2025, 1, 1)))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("신정 데이터가 없습니다"));
+        holidayService.refreshHolidays(new HolidayRefreshRequest("KR", 2025));
+        long before = holidayRepository.count();
 
-        // then
-        assertThat(newYear.getName()).containsIgnoringCase("New Year");
-        assertThat(newYear.getCountry().getCode()).isEqualTo("KR");
-        assertThat(newYear.getGlobal()).isTrue();
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 국가 코드로 조회 시 예외 발생")
-    void getHolidayList_invalidCountryCode() {
-        // when & then
-        assertThatThrownBy(() -> holidayService.getHolidayList("XX", 2025))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("잘못된 국가 코드입니다");
-    }
-
-    @Test
-    @DisplayName("여러 국가의 같은 날짜 공휴일 구분 저장")
-    void syncMultipleCountriesSameDate() {
-        // given
-        Country usa = countryRepository.save(
-            Country.builder()
-                .code("US")
-                .name("United States")
-                .build()
-        );
-
-        // when
-        holidayService.syncHolidaysByYear(korea, 2025);
-        holidayService.syncHolidaysByYear(usa, 2025);
-
-        // then
-        List<Holiday> koreaHolidays = holidayRepository.findByCountryAndDateBetween(
-            korea,
+        HolidaySearchRequest req = new HolidaySearchRequest(
             LocalDate.of(2025, 1, 1),
-            LocalDate.of(2025, 12, 31)
-        );
-        List<Holiday> usaHolidays = holidayRepository.findByCountryAndDateBetween(
-            usa,
-            LocalDate.of(2025, 1, 1),
-            LocalDate.of(2025, 12, 31)
+            LocalDate.of(2025, 12, 31),
+            "KR",
+            null,
+            0,
+            20
         );
 
-        assertThat(koreaHolidays).isNotEmpty();
-        assertThat(usaHolidays).isNotEmpty();
-        assertThat(koreaHolidays).allMatch(h -> h.getCountry().getCode().equals("KR"));
-        assertThat(usaHolidays).allMatch(h -> h.getCountry().getCode().equals("US"));
+        HolidaySearchResponse res = holidayService.searchHolidays(req);
+
+        assertThat(res.holidays()).isNotEmpty();
+        assertThat(holidayRepository.count()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("검색: 페이징 정보 검증")
+    void search_paging() {
+
+        holidayService.refreshHolidays(new HolidayRefreshRequest("KR", 2025));
+
+        HolidaySearchRequest req = new HolidaySearchRequest(
+            LocalDate.of(2025, 1, 1),
+            LocalDate.of(2025, 12, 31),
+            "KR",
+            null,
+            0,
+            5
+        );
+
+        HolidaySearchResponse res = holidayService.searchHolidays(req);
+
+        assertThat(res.pageInfo().pageSize()).isEqualTo(5);
+        assertThat(res.pageInfo().currentPage()).isEqualTo(0);
+        assertThat(res.pageInfo().totalElements()).isGreaterThan(5);
+        assertThat(res.pageInfo().totalPages()).isGreaterThan(1);
+    }
+
+    // ---------------------------------------------------------
+    // 2) 검색 예외 테스트
+    // ---------------------------------------------------------
+
+    @Test
+    @DisplayName("예외: 국가 코드 잘못됨")
+    void search_invalidCountry() {
+
+        HolidaySearchRequest req = new HolidaySearchRequest(
+            LocalDate.of(2025, 1, 1),
+            LocalDate.of(2025, 12, 31),
+            "XX",
+            null,
+            0,
+            20
+        );
+
+        assertThatThrownBy(() -> holidayService.searchHolidays(req))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.INVALID_COUNTRY_CODE);
+    }
+
+    @Test
+    @DisplayName("예외: startDate > endDate")
+    void search_invalidDateRange() {
+
+        assertThatThrownBy(() ->
+            new HolidaySearchRequest(
+                LocalDate.of(2025, 12, 31),
+                LocalDate.of(2025, 1, 1),
+                "KR",
+                null,
+                0,
+                20
+            )
+        )
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.INVALID_DATE_RANGE);
+    }
+
+    @Test
+    @DisplayName("예외: 타입 개수 너무 많음")
+    void search_typeTooMany() {
+
+        List<HolidayType> invalid = List.of(
+            HolidayType.PUBLIC,
+            HolidayType.BANK,
+            HolidayType.SCHOOL,
+            HolidayType.OPTIONAL,
+            HolidayType.AUTHORITIES,
+            HolidayType.OBSERVANCE,
+            HolidayType.PUBLIC // 7개
+        );
+
+        assertThatThrownBy(() ->
+            new HolidaySearchRequest(
+                LocalDate.of(2025, 1, 1),
+                LocalDate.of(2025, 12, 31),
+                "KR",
+                invalid,
+                0,
+                20
+            )
+        )
+            .isInstanceOf(Exception.class);
+    }
+
+    @Test
+    @DisplayName("예외: endDate가 미래")
+    void search_futureEndDate() {
+
+        assertThatThrownBy(() ->
+            new HolidaySearchRequest(
+                LocalDate.of(2025, 1, 1),
+                LocalDate.now().plusDays(1),
+                "KR",
+                null,
+                0,
+                20
+            )
+        )
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.FUTURE_YEAR_NOT_ALLOWED);
+    }
+
+    // ---------------------------------------------------------
+    // 3) 삭제 기능 테스트
+    // ---------------------------------------------------------
+
+    @Test
+    @DisplayName("삭제: 미래 연도 삭제 시 예외")
+    void delete_futureYear() {
+
+        HolidayDeleteRequest req = new HolidayDeleteRequest("KR", 2030);
+
+        assertThatThrownBy(() -> holidayService.deleteHolidays(req))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.FUTURE_YEAR_NOT_ALLOWED);
+    }
+
+    @Test
+    @DisplayName("삭제: 정상 삭제")
+    void delete_success() {
+
+        holidayService.refreshHolidays(new HolidayRefreshRequest("KR", 2025));
+
+        HolidayDeleteRequest req = new HolidayDeleteRequest("KR", 2025);
+
+        HolidayDeleteResponse res = holidayService.deleteHolidays(req);
+
+        assertThat(res.deletedCount()).isGreaterThan(0);
+    }
+
+    // ---------------------------------------------------------
+    // 4) 재동기화 기능 테스트
+    // ---------------------------------------------------------
+
+    @Test
+    @DisplayName("재동기화: 정상 동작")
+    void refresh_success() {
+
+        HolidayRefreshRequest req = new HolidayRefreshRequest("KR", 2025);
+
+        HolidayRefreshResponse res = holidayService.refreshHolidays(req);
+
+        assertThat(res.newCount()).isGreaterThan(0);
+    }
+
+    @Test
+    @DisplayName("재동기화: 미래 연도 요청 시 예외")
+    void refresh_futureYear() {
+
+        HolidayRefreshRequest req = new HolidayRefreshRequest("KR", 2030);
+
+        assertThatThrownBy(() -> holidayService.refreshHolidays(req))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.FUTURE_YEAR_NOT_ALLOWED);
+    }
+
+    // ---------------------------------------------------------
+    // 5) 대량 동기화 테스트
+    // ---------------------------------------------------------
+
+    @Test
+    @DisplayName("6년 전체 동기화 정상 동작")
+    void syncSixYears_success() {
+
+        HolidaySyncResponse res = holidayService.syncHolidaysFor6Years();
+
+        assertThat(res.successCount()).isGreaterThan(0);
+        assertThat(res.totalCount()).isGreaterThan(0);
     }
 }
