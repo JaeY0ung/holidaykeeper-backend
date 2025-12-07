@@ -3,8 +3,10 @@ package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -47,7 +49,7 @@ public class HolidayServiceImpl implements HolidayService {
     private final HolidayConverter holidayConverter;
 
     @Builder
-    private record SyncResult(
+    public record SyncResult(
         int oldCount,            // 이전에 저장되었던 레코드 수
         int newCount,            // 새롭게 재동기화된 후의 레코드 수
         int actualDeletedCount,  // 실제로 DB에서 삭제된 레코드 수
@@ -83,6 +85,7 @@ public class HolidayServiceImpl implements HolidayService {
     }
 
     @Override
+    @Transactional
     public HolidayRefreshResponse refreshHolidays(HolidayRefreshRequest request) {
 
         Country country = countryService.getCountryByCode(request.countryCode());
@@ -115,7 +118,7 @@ public class HolidayServiceImpl implements HolidayService {
 
         List<Country> countryList = countryService.getCountryList();
 
-        List<CompletableFuture<SyncResult>> futures = new java.util.ArrayList<>();
+        List<CompletableFuture<SyncResult>> futures = new ArrayList<>();
 
         for (Country country : countryList) {
             for (int year = startYear; year <= endYear; year++) {
@@ -139,7 +142,8 @@ public class HolidayServiceImpl implements HolidayService {
             .map(CompletableFuture::join)
             .toList();
 
-        int successCount = (int) results.stream().filter(r -> r != null).count();
+        // 국가, 연도 조합 기준 성공 수와 실패 수
+        int successCount = (int) results.stream().filter(Objects::nonNull).count();
         int failCount = results.size() - successCount;
 
         LocalDateTime endTime = LocalDateTime.now();
@@ -156,7 +160,7 @@ public class HolidayServiceImpl implements HolidayService {
             .durationSeconds(durationSeconds)
             .build();
     }
-    
+
     @Transactional
     @Async("holidayExecutor")
     public CompletableFuture<SyncResult> syncHolidaysByYearAsync(Country country, Integer year) {
@@ -177,8 +181,7 @@ public class HolidayServiceImpl implements HolidayService {
 
         // API로 새 데이터 가져오기
         List<HolidayResponse> responses = nagerApiClient.fetchPublicHolidays(
-            country.getCode(),
-            year);
+            country.getCode(), year);
 
         if (responses == null || responses.isEmpty()) {
             throw new IllegalStateException("공휴일 목록 API 호출 실패: 응답이 비어있습니다");

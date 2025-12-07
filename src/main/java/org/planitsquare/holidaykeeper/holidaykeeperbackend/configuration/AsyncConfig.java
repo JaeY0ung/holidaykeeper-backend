@@ -15,8 +15,8 @@ public class AsyncConfig {
 
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
 
-        executor.setCorePoolSize(10);   // 동시에 10개 국가/연도 작업 수행
-        executor.setMaxPoolSize(20);    // 최대 20개까지 확장
+        executor.setCorePoolSize(10);   // 동시 국가/연도 작업 수행 스레드 수
+        executor.setMaxPoolSize(20);    // 최대 확장 개수
         executor.setQueueCapacity(100); // 대기 큐
         executor.setThreadNamePrefix("HolidaySync-");
         executor.initialize();
