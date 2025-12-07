@@ -374,12 +374,6 @@ holiday:
 - http://localhost:8080/h2-console 접속
 - 실제 저장된 공휴일 데이터 SQL 쿼리로 확인
 
-3. **테스트 실행**
-
-```bash
-   ./gradlew clean test
-```
-
 ---
 
 **플랜잇스퀘어 백엔드 개발자 채용 과제**  
