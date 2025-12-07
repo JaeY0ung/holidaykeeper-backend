@@ -17,37 +17,6 @@ public class HolidayQueryRepository {
     private final JPAQueryFactory queryFactory;
 
     /**
-     * 공휴일 검색 (페이징 없이)
-     */
-    @Deprecated
-    public List<Holiday> search(
-        Country country,
-        LocalDate start,
-        LocalDate end,
-        List<String> types
-    ) {
-
-        QHoliday h = QHoliday.holiday;
-
-        BooleanExpression predicate = h.country.eq(country)
-            .and(h.date.between(start, end));
-
-        if (types != null && !types.isEmpty()) {
-            BooleanExpression typeExpr = null;
-            for (String type : types) {
-                BooleanExpression containsType = h.types.containsIgnoreCase(type);
-                typeExpr = (typeExpr == null) ? containsType : typeExpr.or(containsType);
-            }
-            predicate = predicate.and(typeExpr);
-        }
-
-        return queryFactory
-            .selectFrom(h)
-            .where(predicate)
-            .fetch();
-    }
-
-    /**
      * 공휴일 검색 (페이징 적용)
      */
     public List<Holiday> searchWithPaging(
