@@ -3,17 +3,15 @@ package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.client.NagerApiClient;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.client.NagerApiClientReactive;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.converter.HolidayConverter;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayRefreshRequest;
@@ -29,9 +27,10 @@ import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dt
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.HolidayQueryRepository;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.HolidayRepository;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.utility.DateUtil;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Service
@@ -43,13 +42,14 @@ public class HolidayServiceImpl implements HolidayService {
     private final HolidayQueryRepository holidayQueryRepository;
 
     private final NagerApiClient nagerApiClient;
+    private final NagerApiClientReactive nagerApiClientReactive;
 
     private final CountryService countryService;
 
     private final HolidayConverter holidayConverter;
 
     @Builder
-    public record SyncResult(
+    private record SyncResult(
         int oldCount,            // 이전에 저장되었던 레코드 수
         int newCount,            // 새롭게 재동기화된 후의 레코드 수
         int actualDeletedCount,  // 실제로 DB에서 삭제된 레코드 수
@@ -61,6 +61,7 @@ public class HolidayServiceImpl implements HolidayService {
     /**
      * 공휴일 내용 비교를 위한 record
      */
+    @Builder
     private record HolidayContent(
         LocalDate date,
         String localName,
@@ -73,12 +74,33 @@ public class HolidayServiceImpl implements HolidayService {
 
     }
 
+    /**
+     * (국가, 연도, 응답 리스트)를 한 번에 담는 record
+     */
+    @Builder
+    private record CountryYearHolidays(
+        Country country,
+        int year,
+        List<HolidayResponse> responses
+    ) {
+
+    }
 
     @Override
     @Transactional
     public HolidaySyncResponse syncHolidaysFor2Years() {
 
         int startYear = DateUtil.getTodayYear() - 1;
+        int endYear = DateUtil.getTodayYear();
+
+        return syncHolidays(startYear, endYear);
+    }
+
+    @Override
+    @Transactional
+    public HolidaySyncResponse syncHolidaysFor6Years() {
+
+        int startYear = DateUtil.getTodayYear() - 5;
         int endYear = DateUtil.getTodayYear();
 
         return syncHolidays(startYear, endYear);
@@ -94,20 +116,68 @@ public class HolidayServiceImpl implements HolidayService {
 
         return HolidayRefreshResponse.builder()
             .oldCount(syncResult.oldCount())
-            .newCount(syncResult.newCount)
+            .newCount(syncResult.newCount())
             .actualDeletedCount(syncResult.actualDeletedCount())
             .actualAddedCount(syncResult.actualAddedCount())
             .build();
     }
 
     @Override
+    public HolidaySearchResponse searchHolidays(HolidaySearchRequest request) {
+
+        Country country = countryService.getCountryByCode(request.countryCode());
+
+        List<String> typeValues = (request.types() == null || request.types().isEmpty())
+            ? null
+            : request.types().stream()
+                .map(HolidayType::getValue)
+                .toList();
+
+        // 1. 페이징 적용하여 데이터 조회
+        List<Holiday> holidays = holidayQueryRepository.searchWithPaging(
+            country,
+            request.startDate(),
+            request.endDate(),
+            typeValues,
+            request.page(),
+            request.size()
+        );
+
+        // 2. 전체 개수 조회 (페이지 정보를 위해)
+        long totalElements = holidayQueryRepository.count(
+            country,
+            request.startDate(),
+            request.endDate(),
+            typeValues
+        );
+
+        // 3. 변환 및 반환
+        return holidayConverter.toSearchResponseWithPaging(
+            holidays,
+            request.page(),
+            request.size(),
+            totalElements
+        );
+    }
+
+    @Override
     @Transactional
-    public HolidaySyncResponse syncHolidaysFor6Years() {
+    public HolidayDeleteResponse deleteHolidays(HolidayDeleteRequest request) {
 
-        int startYear = DateUtil.getTodayYear() - 5;
-        int endYear = DateUtil.getTodayYear();
+        // 삭제할 국가
+        Country country = countryService.getCountryByCode(request.countryCode());
 
-        return syncHolidays(startYear, endYear);
+        // 삭제할 기간
+        LocalDate startDate = LocalDate.of(request.year(), 1, 1);
+        LocalDate endDate = LocalDate.of(request.year(), 12, 31);
+
+        // 삭제
+        int deletedCount = holidayRepository.deleteByCountryAndDateBetween(country, startDate,
+            endDate);
+
+        return HolidayDeleteResponse.builder()
+            .deletedCount(deletedCount)
+            .build();
     }
 
     private HolidaySyncResponse syncHolidays(int startYear, int endYear) {
@@ -118,56 +188,140 @@ public class HolidayServiceImpl implements HolidayService {
 
         List<Country> countryList = countryService.getCountryList();
 
-        List<CompletableFuture<SyncResult>> futures = new ArrayList<>();
+        // 1. 외부 API 병렬 호출 → 모든 응답을 한 번에 가져옴
+        List<CountryYearHolidays> allResponses = fetchAllHolidaysReactive(
+            countryList, startYear, endYear
+        ).block(); // <- 여기까지만 Reactor 사용
 
-        for (Country country : countryList) {
-            for (int year = startYear; year <= endYear; year++) {
+        int totalCount = 0;
+        int successCount = 0;
+        int failCount = 0;
 
-                int finalYear = year;
+        // 2. 이후는 전부 동기 + JPA + @Transactional 안에서 수행
+        for (CountryYearHolidays cyh : allResponses) {
+            totalCount++;
 
-                CompletableFuture<SyncResult> future =
-                    syncHolidaysByYearAsync(country, year)
-                        .exceptionally(ex -> {
-                            log.warn("공휴일 동기화 실패: {} - {} ({})",
-                                country.getCode(), finalYear, ex.getMessage());
-                            return null;
-                        });
+            Country country = cyh.country();
+            int year = cyh.year();
+            List<HolidayResponse> responses = cyh.responses();
 
-                futures.add(future);
+            try {
+                if (responses == null || responses.isEmpty()) {
+                    log.warn("공휴일 응답 없음: {} - {}", country.getCode(), year);
+                    failCount++;
+                    continue;
+                }
+
+                SyncResult result = syncHolidaysByYearSync(country, year, responses);
+                successCount++;
+
+                log.debug("동기화 성공: {} - {} (old: {}, new: {}, +{}, -{})",
+                    country.getCode(),
+                    year,
+                    result.oldCount(),
+                    result.newCount(),
+                    result.actualAddedCount(),
+                    result.actualDeletedCount()
+                );
+
+            } catch (Exception e) {
+                failCount++;
+                log.warn("동기화 실패: {} - {} ({})",
+                    country.getCode(), year, e.getMessage(), e);
             }
         }
 
-        // 모든 비동기 작업 완료 대기
-        List<SyncResult> results = futures.stream()
-            .map(CompletableFuture::join)
-            .toList();
-
-        // 국가, 연도 조합 기준 성공 수와 실패 수
-        int successCount = (int) results.stream().filter(Objects::nonNull).count();
-        int failCount = results.size() - successCount;
-
-        LocalDateTime endTime = LocalDateTime.now();
-        long durationSeconds = ChronoUnit.SECONDS.between(startTime, endTime);
+        LocalDateTime end = LocalDateTime.now();
+        long duration = ChronoUnit.SECONDS.between(startTime, end);
 
         return HolidaySyncResponse.builder()
-            .totalCount(results.size())
+            .totalCount(totalCount)
             .successCount(successCount)
             .failCount(failCount)
             .countryCount(countryList.size())
             .yearRange(startYear + "-" + endYear)
             .startTime(startTime.toString())
-            .endTime(endTime.toString())
-            .durationSeconds(durationSeconds)
+            .endTime(end.toString())
+            .durationSeconds(duration)
             .build();
     }
 
-    @Transactional
-    @Async("holidayExecutor")
-    public CompletableFuture<SyncResult> syncHolidaysByYearAsync(Country country, Integer year) {
+    private Mono<List<CountryYearHolidays>> fetchAllHolidaysReactive(
+        List<Country> countryList,
+        int startYear,
+        int endYear
+    ) {
 
-        SyncResult result = syncHolidaysByYear(country, year);
+        return Flux.fromIterable(countryList)
+            .flatMap(country ->
+                Flux.range(startYear, endYear - startYear + 1)
+                    .flatMap(year ->
+                        nagerApiClientReactive.fetchPublicHolidays(country.getCode(), year)
+                            .onErrorResume(ex -> {
+                                log.warn("공휴일 API 실패: {} - {} ({})",
+                                    country.getCode(), year, ex.getMessage());
+                                // 실패한 경우 빈 리스트로 대체
+                                return Mono.just(List.of());
+                            })
+                            .map(responses ->
+                                CountryYearHolidays.builder()
+                                    .country(country)
+                                    .year(year)
+                                    .responses(responses)
+                                    .build()
+                            )
+                    )
+            )
+            .collectList();
+    }
 
-        return CompletableFuture.completedFuture(result);
+    private SyncResult syncHolidaysByYearSync(
+        Country country,
+        int year,
+        List<HolidayResponse> responses
+    ) {
+
+        LocalDate startDate = LocalDate.of(year, 1, 1);
+        LocalDate endDate = LocalDate.of(year, 12, 31);
+
+        // 기존 데이터 조회
+        List<Holiday> oldHolidays = holidayRepository.findByCountryAndDateBetween(
+            country, startDate, endDate);
+
+        // Response → Entity 변환
+        List<Holiday> newHolidays = responses.stream()
+            .map(r -> holidayConverter.toEntity(r, country))
+            .toList();
+
+        // Set 비교
+        Set<HolidayContent> oldSet = oldHolidays.stream()
+            .map(this::toHolidayContent)
+            .collect(Collectors.toSet());
+
+        Set<HolidayContent> newSet = newHolidays.stream()
+            .map(this::toHolidayContent)
+            .collect(Collectors.toSet());
+
+        Set<HolidayContent> actualDeleted = new HashSet<>(oldSet);
+        actualDeleted.removeAll(newSet);
+
+        Set<HolidayContent> actualAdded = new HashSet<>(newSet);
+        actualAdded.removeAll(oldSet);
+
+        // 삭제
+        int deletedCount = holidayRepository.deleteByCountryAndDateBetween(
+            country, startDate, endDate
+        );
+
+        // 저장
+        int saved = holidayRepository.saveAll(newHolidays).size();
+
+        return SyncResult.builder()
+            .oldCount(deletedCount)
+            .newCount(saved)
+            .actualDeletedCount(actualDeleted.size())
+            .actualAddedCount(actualAdded.size())
+            .build();
     }
 
     private SyncResult syncHolidaysByYear(Country country, Integer year) {
@@ -231,72 +385,15 @@ public class HolidayServiceImpl implements HolidayService {
      */
     private HolidayContent toHolidayContent(Holiday holiday) {
 
-        return new HolidayContent(
-            holiday.getDate(),
-            holiday.getLocalName(),
-            holiday.getName(),
-            holiday.getFixed(),
-            holiday.getCounties(),
-            holiday.getLaunchYear(),
-            holiday.getTypes()
-        );
-    }
-
-    @Override
-    public HolidaySearchResponse searchHolidays(HolidaySearchRequest request) {
-
-        Country country = countryService.getCountryByCode(request.countryCode());
-
-        List<String> typeValues = (request.types() == null || request.types().isEmpty())
-            ? null
-            : request.types().stream()
-                .map(HolidayType::getValue)
-                .toList();
-
-        // 1. 페이징 적용하여 데이터 조회
-        List<Holiday> holidays = holidayQueryRepository.searchWithPaging(
-            country,
-            request.startDate(),
-            request.endDate(),
-            typeValues,
-            request.page(),
-            request.size()
-        );
-
-        // 2. 전체 개수 조회 (페이지 정보를 위해)
-        long totalElements = holidayQueryRepository.count(
-            country,
-            request.startDate(),
-            request.endDate(),
-            typeValues
-        );
-
-        // 3. 변환 및 반환
-        return holidayConverter.toSearchResponseWithPaging(
-            holidays,
-            request.page(),
-            request.size(),
-            totalElements
-        );
-    }
-
-    @Override
-    @Transactional
-    public HolidayDeleteResponse deleteHolidays(HolidayDeleteRequest request) {
-
-        // 삭제할 국가
-        Country country = countryService.getCountryByCode(request.countryCode());
-
-        // 삭제할 기간
-        LocalDate startDate = LocalDate.of(request.year(), 1, 1);
-        LocalDate endDate = LocalDate.of(request.year(), 12, 31);
-
-        // 삭제
-        int deletedCount = holidayRepository.deleteByCountryAndDateBetween(country, startDate,
-            endDate);
-
-        return HolidayDeleteResponse.builder()
-            .deletedCount(deletedCount)
+        return HolidayContent.builder()
+            .date(holiday.getDate())
+            .localName(holiday.getLocalName())
+            .name(holiday.getName())
+            .fixed(holiday.getFixed())
+            .counties(holiday.getCounties())
+            .launchYear(holiday.getLaunchYear())
+            .types(holiday.getTypes())
             .build();
+
     }
 }

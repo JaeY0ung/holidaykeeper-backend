@@ -22,6 +22,7 @@ dependencies {
     // Spring Boot Web, Validation
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     // Spring Devtools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -40,9 +41,6 @@ dependencies {
 
     // DB
     runtimeOnly 'com.h2database:h2'
-
-    // FCM
-    implementation 'com.google.firebase:firebase-admin:9.2.0'
 
     // Swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14'
