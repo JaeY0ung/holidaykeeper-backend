@@ -1,11 +1,14 @@
 package org.planitsquare.holidaykeeper.holidaykeeperbackend.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+@Getter
+@AllArgsConstructor
 public enum ErrorCode {
 
     // 공통
-    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력 값입니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
 
     // 날짜·연도 검증
@@ -18,26 +21,8 @@ public enum ErrorCode {
 
     // 공휴일 동기화·조회 관련 오류
     COUNTRY_API_CALL_FAILED(HttpStatus.BAD_REQUEST, "국가 목록 API 호출에 실패했습니다."),
-    HOLIDAY_API_CALL_FAILED(HttpStatus.BAD_REQUEST, "공휴일 API 호출에 실패했습니다."),
-    HOLIDAY_API_EMPTY_RESPONSE(HttpStatus.BAD_REQUEST, "공휴일 API 응답이 비어있습니다."),
-    HOLIDAY_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "공휴일 데이터를 찾을 수 없습니다.");
+    HOLIDAY_API_CALL_FAILED(HttpStatus.BAD_REQUEST, "공휴일 API 호출에 실패했습니다.");
 
     private final HttpStatus status;
     private final String message;
-
-    ErrorCode(HttpStatus status, String message) {
-
-        this.status = status;
-        this.message = message;
-    }
-
-    public HttpStatus getStatus() {
-
-        return status;
-    }
-
-    public String getMessage() {
-
-        return message;
-    }
 }
