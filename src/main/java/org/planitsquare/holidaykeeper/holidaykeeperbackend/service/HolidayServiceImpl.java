@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.client.NagerApiClient;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.converter.HolidayConverter;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.BusinessException;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.ErrorCode;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayDeleteRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidayRefreshRequest;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.dto.request.HolidaySearchRequest;
@@ -164,7 +166,7 @@ public class HolidayServiceImpl implements HolidayService {
             year);
 
         if (responses == null || responses.isEmpty()) {
-            throw new IllegalStateException("공휴일 목록 API 호출 실패: 응답이 비어있습니다");
+            throw new BusinessException(ErrorCode.HOLIDAY_API_CALL_FAILED);
         }
 
         // 변환

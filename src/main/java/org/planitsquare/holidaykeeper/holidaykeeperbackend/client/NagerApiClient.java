@@ -3,6 +3,8 @@ package org.planitsquare.holidaykeeper.holidaykeeperbackend.client;
 import java.util.Arrays;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.BusinessException;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.ErrorCode;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dto.response.CountryResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dto.response.HolidayResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -45,7 +47,7 @@ public class NagerApiClient {
 
         } catch (Exception e) {
             log.error("국가 목록 API 호출 실패", e);
-            throw new RuntimeException("국가 목록 조회 실패", e);
+            throw new BusinessException(ErrorCode.COUNTRY_API_CALL_FAILED);
         }
     }
 
@@ -70,8 +72,7 @@ public class NagerApiClient {
 
         } catch (Exception e) {
             log.error("공휴일 API 호출 실패: {} - {}", countryCode, year, e);
-            throw new RuntimeException(
-                String.format("공휴일 조회 실패: %s - %d", countryCode, year), e);
+            throw new BusinessException(ErrorCode.HOLIDAY_API_CALL_FAILED);
         }
     }
 }

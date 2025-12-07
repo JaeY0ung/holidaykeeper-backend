@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.client.NagerApiClient;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.converter.CountryConverter;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.BusinessException;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.ErrorCode;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.entity.Country;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.external_api_dto.response.CountryResponse;
 import org.planitsquare.holidaykeeper.holidaykeeperbackend.model.repository.CountryRepository;
@@ -27,7 +29,7 @@ public class CountryServiceImpl implements CountryService {
     public Country getCountryByCode(String countryCode) {
 
         return countryRepository.findByCode(countryCode)
-            .orElseThrow(() -> new IllegalArgumentException("잘못된 국가 코드입니다."));
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_COUNTRY_CODE));
     }
 
     @Override
@@ -47,7 +49,7 @@ public class CountryServiceImpl implements CountryService {
         List<CountryResponse> responses = nagerApiClient.fetchAvailableCountries();
         // 빈 응답은 에러 던지기
         if (responses == null || responses.isEmpty()) {
-            throw new IllegalStateException("국가 목록 API 호출 실패: 응답이 비어있습니다");
+            throw new BusinessException(ErrorCode.HOLIDAY_API_CALL_FAILED);
         }
         // 변환
         List<Country> countries = responses.stream()

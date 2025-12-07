@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
 import lombok.NonNull;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.BusinessException;
+import org.planitsquare.holidaykeeper.holidaykeeperbackend.exception.ErrorCode;
 
 @Schema(description = "공휴일 삭제 요청")
 public record HolidayDeleteRequest(
@@ -34,7 +36,7 @@ public record HolidayDeleteRequest(
     public HolidayDeleteRequest {
 
         if (year > LocalDate.now().getYear()) {
-            throw new IllegalArgumentException("연도는 현재 연도보다 클 수 없습니다.");
+            throw new BusinessException(ErrorCode.FUTURE_YEAR_NOT_ALLOWED);
         }
     }
 }
