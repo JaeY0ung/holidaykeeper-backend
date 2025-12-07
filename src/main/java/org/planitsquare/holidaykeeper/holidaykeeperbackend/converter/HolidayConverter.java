@@ -29,29 +29,6 @@ public class HolidayConverter {
     }
 
     /**
-     * 페이징 없이 검색 결과를 응답으로 변환
-     */
-    @Deprecated
-    public HolidaySearchResponse toSearchResponse(List<Holiday> holidays) {
-
-        return HolidaySearchResponse.builder()
-            .holidays(holidays.stream()
-                .map(holiday ->
-                    HolidayItemDto.builder()
-                        .id(holiday.getId())
-                        .date(holiday.getDate())
-                        .localName(holiday.getLocalName())
-                        .name(holiday.getName())
-                        .countryId(holiday.getCountry().getId())
-                        .countryName(holiday.getCountry().getName())
-                        .types(holiday.getTypesList())
-                        .build())
-                .toList()
-            )
-            .build();
-    }
-
-    /**
      * 페이징 정보를 포함한 검색 결과를 응답으로 변환
      */
     public HolidaySearchResponse toSearchResponseWithPaging(
