@@ -1,94 +1,353 @@
-# 목표
+# Holiday Keeper
 
-- 공휴일 데이터를 저장, 조회, 관리하는 미니 서비스 구현
-- 기한: 12/7 23:59
-- 제출 형식: GitHub Public 레포지터리 전달
+전 세계 공휴일 데이터를 저장·조회·관리하는 Mini Service
 
-# 상세 기능 명세
+## 🎯 프로젝트 개요
 
-1. 데이터 적재
+Nager.Date API를 활용하여 2020~2025년의 전 세계 공휴일 데이터를 수집하고 관리하는 REST API 서비스입니다.
 
-- [X] 최근 6년의 공휴일을 외부 API에서 수집하여 저장
-    - 2025년의 최근 5년은 2021,2022,2023,2024,2025년인데, 요구사항에는 2020년~2025년을 최근 5년이라고 언급하고 있다.
-    - 헷갈릴 여지가 있어, 최근 N년은 (<현재 년도> - N + 1) ~ (<현재 년도>)로 정의하도록 하겠다.
-    - 이에 따라, 2020 ~ 2025년을 구하는 것을 요구사항으로 받아들이고, 최근 6년의 공휴일을 수집하는 것으로 수정하였다.
-- [X] 최초 실행시 시 6년 × N 개 국가를 일괄 적재하는 기능 포함
+### 주요 기능
 
-2. 검색
+1. **데이터 적재**: 최초 실행 시 모든 국가의 공휴일 데이터 자동 수집
+2. **검색**: 연도, 국가, 기간, 타입 등 다양한 필터로 공휴일 조회 (페이징 지원)
+3. **재동기화**: 특정 연도/국가 데이터를 외부 API에서 재호출하여 업데이트
+4. **삭제**: 특정 연도/국가의 공휴일 레코드 전체 삭제
+5. **배치 자동화**: 매년 1월 2일 01:00 KST에 전년도·금년도 데이터 자동 동기화
 
-- [X] 연도별, 국가별 필터 기반 공휴일 조회
-- [X] from ~ to 기간, 공휴일 타입 등 추가 필터 자유 확장
-- [X] 결과는 페이징 형태로 응답
+## 🚀 시작하기
 
-3. 재동기화(Refresh)
+### 사전 요구사항
 
-- [X] 특정 연도, 국가 데이터를 재호출하여 Upsert(덮어쓰기) 가능
+- JDK 21 이상
+- Gradle 8.x 이상 (또는 내장 Gradle Wrapper 사용)
 
-4. 삭제
+### 빌드 및 실행
 
-- [X] 특정 연도, 국가의 공휴일 레코드 전체 삭제
+#### 방법 1: Gradle Wrapper 사용 (권장)
 
-5. (선택) 배치 자동화
+```bash
+# 1. 프로젝트 클론
+git clone https://github.com/JaeY0ung/holidaykeeper-backend.git
+cd holidaykeeper-backend
 
-- [X] 매년 1월 2일 01:00 KST 에 전년도·금년도 데이터를 자동 동기화
+# 2. 빌드
+./gradlew clean build
 
-6. 테스트
-
-- [X] JUnit 5 활용하여, 일정한 주기로 서비스 메서드 단위, 컨트롤러 메소드로 테스트 코드 작성 및 테스트 진행
-
-7. 기타사항
-
-- [X]  엔드포인트 경로
-- [X]  HTTP 메서드
-- [X]  파라미터, 응답 스키마 등 REST API 설계
-
-# 기술 스택
-
-| 필수 스택   | Java 21 · Spring Boot 3.4 · JPA(Hibernate)     | 비고              |
-|---------|------------------------------------------------|-----------------|
-| DB      | 인메모리 H2                                        |                 |
-| 테스트     | JUnit 5                                        | 선택이지만 권장        |
-| 문서화     | OpenAPI 3(Swagger UI)로 직접 설계한 API 자동 노출        |                 |
-| 기타 스택   | Querydsl 5, Dockerfile, GitHub Actions CI 등 자유 | 자유              |
-| UI / UX | 필수 아님, 기술 스택 제한 없음                             | 선택, 기술 스택 제한 없음 |
-
-# 사용할 API
-
-## 1. 국가 목록 조회
-
-- 엔드 포인트: https://date.nager.at/api/v3/AvailableCountries
-- 응답: 국가 정보 배열
-- 응답 형식
-
+# 3. 실행
+./gradlew bootRun
 ```
-[
+
+#### 방법 2: JAR 파일로 실행
+
+```bash
+# 1. 빌드
+./gradlew clean build
+
+# 2. JAR 파일 실행
+java -jar build/libs/app.jar
+```
+
+#### 방법 3: IDE에서 실행
+
+### 접속 URL
+
+애플리케이션이 시작되면:
+
+- **서버**: http://localhost:8080
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **H2 Console**: http://localhost:8080/h2-console
+    - JDBC URL: `jdbc:h2:file:./data/holidaydb;AUTO_SERVER=TRUE`
+    - Username: `sa`
+    - Password: (비워두기)
+
+### 최초 실행 시
+
+애플리케이션이 시작되면 자동으로 다음 작업이 수행됩니다:
+
+1. 외부 API에서 사용 가능한 모든 국가 목록 조회
+2. 각 국가별 2020~2025년 공휴일 데이터 수집 및 저장
+3. 완료 후 API 사용 가능
+
+⚠️ **주의**: 최초 실행 시 모든 데이터를 수집하는 데 평균 5초 이내의 시간이 소요될 수 있습니다.
+
+## 📚 API 명세
+
+### REST API 엔드포인트 요약
+
+| 메서드    | 경로                   | 설명            | 주요 파라미터                                               |
+|--------|----------------------|---------------|-------------------------------------------------------|
+| GET    | `/holidays`          | 공휴일 검색 (페이징)  | year, countryCode, fromDate, toDate, type, page, size |
+| POST   | `/holidays/sync/all` | 전체 데이터 재적재    | -                                                     |
+| POST   | `/holidays/refresh`  | 특정 연도/국가 재동기화 | year, countryCode                                     |
+| DELETE | `/holidays`          | 특정 연도/국가 삭제   | year, countryCode                                     |
+
+### Swagger UI 및 OpenAPI 문서 확인
+
+애플리케이션 실행 후 다음 URL에서 API 문서를 확인하고 테스트할 수 있습니다:
+
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+    - 브라우저에서 접속하여 모든 API를 시각적으로 확인
+    - "Try it out" 기능으로 즉시 테스트 가능
+    - 요청/응답 예시 자동 표시
+
+### 1. 공휴일 검색
+
+```http
+GET /holidays
+```
+
+**Query Parameters:**
+
+| 파라미터        | 타입            | 필수 | 설명               | 예시                   |
+|-------------|---------------|----|------------------|----------------------|
+| startDate   | string(date)  | X  | 시작 날짜 (ISO 8601) | 2024-01-01           |
+| endDate     | string(date)  | X  | 종료 날짜 (ISO 8601) | 2024-12-31           |
+| countryCode | String        | X  | 국가 코드 (2자리)      | KR, US               |
+| types       | array<string> | X  | 공휴일 타입           | PUBLIC, BANK, SCHOOL |
+| page        | Integer       | X  | 페이지 번호 (0부터 시작)  | 0                    |
+| size        | Integer       | X  | 페이지 크기           | 20                   |
+
+**응답 예시:**
+
+```json
+{
+  "holidays": [
     {
-        "countryCode": "AD", // 국가 코드 (ISO 3166-1 alpha-2, 알파벳 대문자 2자) - 변동 가능 (ex. 동독이 독일에 통합되면서 DD에서 DE로 변경)
-        "name": "Andorra"    // 영문 국가명 (영문, 특수문자 포함 가능 예: ü)
-    },
-    // ... 추가 국가들
-]
+      "id": 1,
+      "date": "2024-01-01",
+      "localName": "신정",
+      "name": "New Year's Day",
+      "countryId": 66,
+      "countryName": "South Korea",
+      "types": [
+        "PUBLIC"
+      ]
+    }
+  ],
+  "pageInfo": {
+    "currentPage": 0,
+    "pageSize": 20,
+    "numberOfElements": 15,
+    "totalElements": 15,
+    "totalPages": 1,
+    "isFirst": true,
+    "isLast": true,
+    "isEmpty": false
+  }
+}
 ```
 
-## 2. 특정 연도 공휴일 조회
+### 2. 전체 데이터 재적재
 
-- 엔드 포인트: https://date.nager.at/api/v3/PublicHolidays/{year}/{countryCode}
-- 응답: 공휴일 정보 배열
-- 응답 형식
+```http
+POST /holidays/sync/all
+```
 
+모든 국가의 모든 연도(2020-2025) 공휴일 데이터를 재적재합니다.
+
+**응답 예시:**
+
+```json
+{
+  "totalCount": 714,
+  "successCount": 714,
+  "failCount": 0,
+  "countryCount": 119,
+  "yearRange": "2020-2025",
+  "startTime": "2025-12-07T22:15:25.410331",
+  "endTime": "2025-12-07T22:15:29.492224",
+  "durationSeconds": 4
+}
 ```
-[
-    {
-        "date": "2025-01-01",     // 공휴일 날짜 (YYYY-MM-DD 형식)
-        "localName": "Any nou",   // 현지 언어로 된 공휴일 명칭
-        "name": "New Year's Day", // 영문 공휴일 명칭
-        "countryCode": "AD",      // 국가 코드 (ISO 3166-1 alpha-2)
-        "fixed": false,           // 고정 공휴일 여부 (true: 매년 같은 날짜, false: 변동 가능)
-        "global": true,           // 전국 단위 공휴일 여부 (true: 전국, false: 지역 한정)
-        "counties": null,         // 적용 지역 목록 (global이 false일 경우 배열, 전국일 경우 null)
-        "launchYear": null,       // 공휴일 제정 연도 (없으면 null)
-        "types": ["Public"]       // 공휴일 유형 배열 (Public, Bank, School, Authorities, Optional 등)
-    },
-    // ... 추가 공휴일들
-] 
+
+### 3. 재동기화 (Refresh)
+
+```http
+POST /holidays/refresh?year={year}&countryCode={countryCode}
 ```
+
+특정 연도와 국가의 공휴일 데이터를 외부 API에서 다시 가져와 업데이트합니다.
+
+**Query Parameters:**
+
+- `year` (필수): 연도 (예: 2024)
+- `countryCode` (필수): 국가 코드 (예: KR)
+
+**응답 예시:**
+
+```json
+{
+  "oldCount": 15,
+  "newCount": 15,
+  "actualDeletedCount": 1,
+  "actualAddedCount": 12
+}
+```
+
+**응답 필드 설명:**
+
+- `deletedCount`: DB에서 삭제된 레코드 수
+- `savedCount`: DB에 저장된 레코드 수
+- `actualChangedCount`: 실제로 변경된 공휴일 개수 (추가/삭제/수정 포함)
+
+### 4. 삭제
+
+```http
+DELETE /holidays?year={year}&countryCode={countryCode}
+```
+
+특정 연도와 국가의 모든 공휴일 레코드를 삭제합니다.
+
+**Query Parameters:**
+
+- `year` (필수): 연도 (예: 2024)
+- `countryCode` (필수): 국가 코드 (예: KR)
+
+**응답 예시:**
+
+```json
+{
+  "deletedCount": 15
+}
+```
+
+## 🗄 데이터베이스 설계
+
+### 테이블 설명
+
+#### country
+
+- **country_id**: 국가 고유 ID (PK, Auto Increment)
+- **country_code**: 국가 코드 (2자리)
+- **country_name**: 국가명
+- **created_at**: 생성일자
+- **updated_at**: 수정일자
+
+#### country_holiday
+
+- **holiday_id**: 공휴일 고유 ID (PK, Auto Increment)
+- **holiday_date**: 공휴일 날짜
+- **holiday_local_name**: 현지 언어 공휴일명
+- **holiday_name**: 영문 공휴일명
+- **country_id**: 국가 ID (FK)
+- **fixed**: 고정 공휴일 여부
+- **global**: 전국 공휴일 여부
+- **counties**: 지역별 공휴일 정보
+- **holiday_launch_year**: 공휴일 시작 연도
+- **holiday_types**: 공휴일 타입 (PUBLIC, BANK, SCHOOL 등)
+- **created_at**: 생성일자
+- **updated_at**: 수정일자
+
+## 🧪 테스트
+
+### 테스트 실행
+
+```bash
+# 전체 테스트 실행
+./gradlew test
+```
+
+### 테스트 커버리지
+
+- **Service Layer**: HolidayService 주요 메서드 테스트
+- **Controller Layer**: REST API 엔드포인트 테스트
+- **Test 항목**:
+    - 공휴일 검색 기능
+    - 재동기화 기능
+    - 삭제 기능
+    - 전체 데이터 로드 기능
+
+## 📦 배치 자동화
+
+### 스케줄 설정
+
+매년 **1월 2일 01:00 KST**에 자동으로 전년도 및 금년도 데이터를 동기화합니다.
+
+```java
+
+@Scheduled(cron = "0 0 1 2 1 *", zone = "Asia/Seoul")
+public void autoSyncHolidays() {
+    // 전년도 및 금년도 공휴일 데이터 자동 동기화
+}
+```
+
+### 동작 방식
+
+1. 모든 국가 목록 조회
+2. 각 국가별로:
+
+- 전년도 데이터 재동기화
+- 금년도 데이터 재동기화
+
+3. 로그 기록 및 완료
+
+## 🔧 설정 파일
+
+### application.yml
+
+주요 설정 항목:
+
+```yaml
+# 외부 API 설정
+nager:
+  api:
+    base-url: https://date.nager.at/api/v3
+
+# 공휴일 데이터 범위 설정
+holiday:
+  start-year: 2020
+  end-year: 2025
+```
+
+## 📝 개발 노트
+
+### 설계 결정사항
+
+1. **테이블 분리**: Country와 Holiday를 분리하여 데이터 중복 최소화
+2. **복합 인덱스**: 자주 사용되는 조회 조건(country_code + year)에 인덱스 적용
+3. **Upsert 전략**: 재동기화 시 기존 데이터 삭제 후 재삽입 방식 채택
+4. **페이징**: 대량 데이터 조회 시 성능을 위한 페이징 필수 적용
+5. **타입 변환**: 외부 API의 List<String> 타입을 Enum으로 변환하여 타입 안정성 확보
+
+### 개선 가능 사항
+
+- QueryDSL 도입으로 동적 쿼리 개선
+- Redis 캐싱 적용
+- 비동기 처리를 통한 대량 데이터 적재 성능 개선
+- 재시도 로직 추가 (외부 API 호출 실패 시)
+
+## 📄 제출 정보
+
+### GitHub 레포지터리
+
+- **URL**: https://github.com/JaeY0ung/holidaykeeper-backend
+- **제출 기한**: 2024년 12월 7일 23:59
+
+### 빌드 환경
+
+- **Java**: 21
+- **Gradle**: 8.5
+- **Spring Boot**: 3.4.0
+
+### 실행 확인 방법
+
+1. **Swagger UI에서 API 테스트**
+
+- 브라우저에서 http://localhost:8080/swagger-ui.html 접속
+- "Try it out" 기능으로 모든 API 즉시 테스트 가능
+
+2. **H2 Console에서 데이터 확인**
+
+- http://localhost:8080/h2-console 접속
+- 실제 저장된 공휴일 데이터 SQL 쿼리로 확인
+
+3. **테스트 실행**
+
+```bash
+   ./gradlew clean test
+```
+
+---
+
+**플랜잇스퀘어 백엔드 개발자 채용 과제**  
+작성일: 2025년 12월
