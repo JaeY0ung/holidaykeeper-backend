@@ -14,8 +14,18 @@ java {
     }
 }
 
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
 repositories {
     mavenCentral()
+}
+
+bootJar {
+    archiveFileName = 'app.jar'
 }
 
 dependencies {
