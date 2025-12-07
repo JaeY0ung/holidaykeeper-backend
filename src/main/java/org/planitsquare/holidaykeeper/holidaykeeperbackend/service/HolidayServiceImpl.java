@@ -3,9 +3,10 @@ package org.planitsquare.holidaykeeper.holidaykeeperbackend.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -56,22 +57,6 @@ public class HolidayServiceImpl implements HolidayService {
         int newCount,            // 새롭게 재동기화된 후의 레코드 수
         int actualDeletedCount,  // 실제로 DB에서 삭제된 레코드 수
         int actualAddedCount    // 실제로 DB에 저장된 레코드 수
-    ) {
-
-    }
-
-    /**
-     * 공휴일 내용 비교를 위한 record
-     */
-    @Builder
-    private record HolidayContent(
-        LocalDate date,
-        String localName,
-        String name,
-        Boolean fixed,
-        String counties,
-        Integer launchYear,
-        String types
     ) {
 
     }
@@ -280,7 +265,7 @@ public class HolidayServiceImpl implements HolidayService {
     private SyncResult syncHolidaysByYearSync(
         Country country,
         int year,
-        List<HolidayResponse> responses
+        List<HolidayResponse> holidayResponses
     ) {
 
         LocalDate startDate = LocalDate.of(year, 1, 1);
@@ -290,40 +275,7 @@ public class HolidayServiceImpl implements HolidayService {
         List<Holiday> oldHolidays = holidayRepository.findByCountryAndDateBetween(
             country, startDate, endDate);
 
-        // Response → Entity 변환
-        List<Holiday> newHolidays = responses.stream()
-            .map(r -> holidayConverter.toEntity(r, country))
-            .toList();
-
-        // Set 비교
-        Set<HolidayContent> oldSet = oldHolidays.stream()
-            .map(this::toHolidayContent)
-            .collect(Collectors.toSet());
-
-        Set<HolidayContent> newSet = newHolidays.stream()
-            .map(this::toHolidayContent)
-            .collect(Collectors.toSet());
-
-        Set<HolidayContent> actualDeleted = new HashSet<>(oldSet);
-        actualDeleted.removeAll(newSet);
-
-        Set<HolidayContent> actualAdded = new HashSet<>(newSet);
-        actualAdded.removeAll(oldSet);
-
-        // 삭제
-        int deletedCount = holidayRepository.deleteByCountryAndDateBetween(
-            country, startDate, endDate
-        );
-
-        // 저장
-        int saved = holidayRepository.saveAll(newHolidays).size();
-
-        return SyncResult.builder()
-            .oldCount(deletedCount)
-            .newCount(saved)
-            .actualDeletedCount(actualDeleted.size())
-            .actualAddedCount(actualAdded.size())
-            .build();
+        return upsert(oldHolidays, holidayResponses, country);
     }
 
     private SyncResult syncHolidaysByYear(Country country, Integer year) {
@@ -336,66 +288,117 @@ public class HolidayServiceImpl implements HolidayService {
             country, startDate, endDate);
 
         // API로 새 데이터 가져오기
-        List<HolidayResponse> responses = nagerApiClient.fetchPublicHolidays(
+        List<HolidayResponse> holidayResponses = nagerApiClient.fetchPublicHolidays(
             country.getCode(), year);
 
-        if (responses == null || responses.isEmpty()) {
+        return upsert(oldHolidays, holidayResponses, country);
+    }
+
+    private SyncResult upsert(
+        List<Holiday> oldHolidays,
+        List<HolidayResponse> holidayResponses,
+        Country country) {
+
+        // 1. 유효성 검사
+        if (holidayResponses == null || holidayResponses.isEmpty()) {
             throw new BusinessException(ErrorCode.HOLIDAY_API_CALL_FAILED);
         }
 
-        // 변환
-        List<Holiday> newHolidays = responses.stream()
-            .map(response -> holidayConverter.toEntity(response, country))
+        // 2. Response → Entity 변환
+        List<Holiday> newHolidays = holidayResponses.stream()
+            .map(r -> holidayConverter.toEntity(r, country))
+            .collect(Collectors.toMap(
+                h -> h.getDate()
+                    + "|" + h.getName()
+                    + "|" + (h.getCounties() == null ? "" : h.getCounties()),
+                h -> h,
+                (h1, h2) -> h1   // 중복 key 발생 시 첫 번째 값 유지
+            ))
+            .values()
+            .stream()
             .toList();
 
-        // Set으로 변환하여 비교
-        Set<HolidayContent> oldSet = oldHolidays.stream()
-            .map(this::toHolidayContent)
-            .collect(Collectors.toSet());
+        // 3. Key 기준 Map 생성
+        Map<String, Holiday> oldMap = oldHolidays.stream()
+            .collect(Collectors.toMap(
+                h -> h.getCountry().getCode()
+                    + "|" + h.getDate()
+                    + "|" + h.getName()
+                    + "|" + (h.getCounties() == null ? "" : h.getCounties()),
+                h -> h
+            ));
 
-        Set<HolidayContent> newSet = newHolidays.stream()
-            .map(this::toHolidayContent)
-            .collect(Collectors.toSet());
+        Map<String, Holiday> newMap = newHolidays.stream()
+            .collect(Collectors.toMap(
+                h -> h.getCountry().getCode()
+                    + "|" + h.getDate()
+                    + "|" + h.getName()
+                    + "|" + (h.getCounties() == null ? "" : h.getCounties()),
+                h -> h
+            ));
 
-        // 실제 삭제된 것 (old에는 있는데 new에는 없음)
-        Set<HolidayContent> actualDeleted = new HashSet<>(oldSet);
-        actualDeleted.removeAll(newSet);
+        int insertCount = 0;
+        int updateCount = 0;
+        int deleteCount = 0;
 
-        // 실제 추가된 것 (new에는 있는데 old에는 없음)
-        Set<HolidayContent> actualAdded = new HashSet<>(newSet);
-        actualAdded.removeAll(oldSet);
+        // 결과 저장 리스트
+        List<Holiday> toSave = new ArrayList<>();
 
-        // 기존 데이터 삭제
-        int deletedCount = holidayRepository.deleteByCountryAndDateBetween(
-            country,
-            startDate,
-            endDate);
+        // 4. INSERT 또는 UPDATE 처리
+        for (Map.Entry<String, Holiday> entry : newMap.entrySet()) {
+            String key = entry.getKey();
+            Holiday newHoliday = entry.getValue();
 
-        // 저장
-        List<Holiday> saved = holidayRepository.saveAll(newHolidays);
+            if (!oldMap.containsKey(key)) {
+                // INSERT
+                toSave.add(newHoliday);
+                insertCount++;
+            } else {
+                Holiday oldHoliday = oldMap.get(key);
+
+                // 내용이 다르면 UPDATE
+                if (!isSameContent(oldHoliday, newHoliday)) {
+                    oldHoliday.updateEntity(newHoliday);
+                    toSave.add(oldHoliday);
+                    updateCount++;
+                }
+            }
+        }
+
+        // 5. DELETE 처리 — newMap에 없는 oldMap 요소 삭제
+        List<Holiday> toDelete = oldMap.keySet().stream()
+            .filter(key -> !newMap.containsKey(key))
+            .map(oldMap::get)
+            .toList();
+
+        deleteCount = toDelete.size();
+
+        if (!toDelete.isEmpty()) {
+            holidayRepository.deleteAll(toDelete);
+        }
+
+        if (!toSave.isEmpty()) {
+            holidayRepository.saveAll(toSave);
+        }
+
+        int newCount = newMap.size();
+        int oldCount = oldHolidays.size();
 
         return SyncResult.builder()
-            .oldCount(deletedCount)
-            .newCount(saved.size())
-            .actualAddedCount(actualAdded.size())
-            .actualDeletedCount(actualDeleted.size())
+            .oldCount(oldCount)
+            .newCount(newCount)
+            .actualAddedCount(insertCount)
+            .actualDeletedCount(deleteCount)
             .build();
     }
 
-    /**
-     * Holiday를 비교 가능한 객체로 변환
-     */
-    private HolidayContent toHolidayContent(Holiday holiday) {
+    private boolean isSameContent(Holiday oldH, Holiday newH) {
 
-        return HolidayContent.builder()
-            .date(holiday.getDate())
-            .localName(holiday.getLocalName())
-            .name(holiday.getName())
-            .fixed(holiday.getFixed())
-            .counties(holiday.getCounties())
-            .launchYear(holiday.getLaunchYear())
-            .types(holiday.getTypes())
-            .build();
-
+        return Objects.equals(oldH.getLocalName(), newH.getLocalName()) &&
+            Objects.equals(oldH.getName(), newH.getName()) &&
+            Objects.equals(oldH.getFixed(), newH.getFixed()) &&
+            Objects.equals(oldH.getCounties(), newH.getCounties()) &&
+            Objects.equals(oldH.getLaunchYear(), newH.getLaunchYear()) &&
+            Objects.equals(oldH.getTypes(), newH.getTypes());
     }
 }

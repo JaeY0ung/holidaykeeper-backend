@@ -101,4 +101,20 @@ public class Holiday {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+
+    /**
+     * 엔티티를 생성하지 않고, update 하는 메서드
+     *
+     * @param source
+     */
+    public void updateEntity(Holiday source) {
+
+        this.localName = source.getLocalName();
+        this.name = source.getName();
+        this.fixed = source.getFixed();
+        this.counties = source.getCounties();
+        this.launchYear = source.getLaunchYear();
+        this.types = source.getTypes();
+    }
 }
