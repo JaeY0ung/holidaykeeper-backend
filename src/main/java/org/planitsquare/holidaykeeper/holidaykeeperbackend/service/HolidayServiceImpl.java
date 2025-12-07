@@ -388,7 +388,21 @@ public class HolidayServiceImpl implements HolidayService {
 
         return h.getCountry().getCode()
             + "|" + h.getDate()
-            + "|" + h.getName();
+            + "|" + normalize(h.getName());
+    }
+
+    private String normalize(String value) {
+
+        if (value == null) {
+            return "";
+        }
+        return value.trim()
+            .replace("’", "'")      // 특수 작은따옴표 통일
+            .replace("‘", "'")
+            .replace("`", "'")
+            .replace("´", "'")
+            .replace("“", "\"")     // 큰따옴표도 통일 (예방적 대응)
+            .replace("”", "\"");
     }
 
     private boolean isSameContent(Holiday oldH, Holiday newH) {
